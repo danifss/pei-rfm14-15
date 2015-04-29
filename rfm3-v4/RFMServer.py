@@ -91,8 +91,8 @@ try:
             th_btcar = BTCar(dirsQueue, dataQueue, accelerometerDataQueue, car_mac_addr, car_port)
             print 'Got connected with car'
             
-            th_track = TrackAnalyser(unity_portTrack, cameraId=1)
-            print "Camera initialized"
+            # th_track = TrackAnalyser(unity_portTrack, cameraId=0)
+            # print "Camera initialized"
 
             th_data_analyser = DataAnalyser(dataQueue, (unity_addr[0], unity_port), mobile_sock, ipaddr = ip_addr)
             th_mobile = Mobile(dirsQueue, '', commands_port)
@@ -101,7 +101,7 @@ try:
             th_mobile.start()
             th_btcar.start()
             th_data_analyser.start()
-            th_track.start()
+            # th_track.start()
 
             break
         except Exception, e:
@@ -109,8 +109,8 @@ try:
             if th_btcar:
                 th_btcar.stop()
 
-            if th_track:
-                th_track.stop()
+            # if th_track:
+            #     th_track.stop()
 
             if th_mobile:
                 th_mobile.stop()
@@ -189,7 +189,7 @@ except KeyboardInterrupt:
     th_btcar.stop()
     th_mobile.stop()
     th_data_analyser.stop()
-    th_track.stop()
+    # th_track.stop()
 
     unity_sock.send('end\n')
     #Close sockets

@@ -4,6 +4,7 @@ from threading import *
 import cv2
 import math
 import numpy
+import matplotlib.pyplot as plt
 from Camera import *
 from PIL import Image, ImageFilter, ImageOps
 import sys, traceback
@@ -11,15 +12,13 @@ import gc
 import timeit
 import copy
 import os
-import numpy as np
-import matplotlib.pyplot as plt
-
 sys.settrace
+
 
 class TrackAnalyser(Thread):
 
     def __init__(self, port = 1234, rangeCoord = 100, sizeLastCoords = 10, cameraId = 0):
-        super(TrackAnalyser,self).__init__()
+        super(TrackAnalyser, self).__init__()
         self.end = False
         self.tcp_socket = socket(AF_INET, SOCK_STREAM)
         self.tcp_socket.bind(('0.0.0.0', port))
@@ -32,7 +31,7 @@ class TrackAnalyser(Thread):
         self.lastCoords = [] # save last coords
         self.rangeCoord = rangeCoord # range parameter comparing with new coord
         self.sizeLastCoords = sizeLastCoords
-        # variable to save initial position
+        #variable to save initial position
 
         self.initialPoint = (None, None)
 
@@ -40,7 +39,7 @@ class TrackAnalyser(Thread):
         self.unity_socket, self.addr = self.tcp_socket.accept()
         socket_list = [self.unity_socket]
         state = "STOP"
-        timeout = sys.maxint
+        timeout = (0.1)
         self.initialPoint = (-1,-1)
         self.trackAdjust() # adjusting the track and settings
 
@@ -50,12 +49,14 @@ class TrackAnalyser(Thread):
             try:
                 read_sockets = select.select(socket_list, [], [], timeout)[0]
                 if len(read_sockets) == 0 and state == "STOP":
-                    timeout = sys.maxint
+                    timeout = (0.1)
                     continue
 
                 data = read_sockets[0].recv(4096)
-            
+                # self.tcp_socket.settimeout(0.1)
+
             except Exception, e:
+                self.tcp_socket.close()
                 print "Error reading socket"
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback, limit=2, file=sys.stdout)
@@ -176,9 +177,9 @@ class TrackAnalyser(Thread):
                     bytes += buf                        # increment bytes sent
                     buf = 0                             # signals empty buffer
                 else:
-                    l = image.read(lines)                   # read line size bytes
+                    l = image.read(lines)               # read line size bytes
                     self.sendToUnity(l)                 # send line size bytes
-                    buf -= lines  # decrement buffer
+                    buf = buf - lines                   # decrement buffer
                     bytes += lines
 
     def trackAdjust(self):
@@ -197,6 +198,7 @@ class TrackAnalyser(Thread):
                 #cv2.waitKey(20)
                 if cv2.waitKey(10) & 0xFF == ord('q'):
                     break
+            cv2.destroyWindow("Display window")
 
             image = Image.fromarray(im).convert('RGB')
             width = image.size[0]
@@ -204,15 +206,16 @@ class TrackAnalyser(Thread):
             print width," ",height
 
             # Criar histograma para determinar valor de threshold entre pretos e brancos
+            # histo = image.histogram()
             histo = image.convert('L').histogram()
             plt.plot(histo)
             plt.show()
             black_value = 0
-        
+
             #th = 50 # Representa o valor de threshold
             print 'Threshold: ',th
             # Determinar um valor intermedio
-            min_level =  sorted(histo)[len(histo)/ch]
+            min_level =  sorted(histo)[2*len(histo)/ch]
             while th < 255:
                 if histo[th] > black_value:
                     black_value = histo[th]
@@ -248,39 +251,31 @@ class TrackAnalyser(Thread):
             # verificar se a vetorizacao foi correta
             vect = cv2.imread("vect.jpg")
             cv2.imshow('Vector preview',vect)
-            cv2.waitKey(30)
-            
+            cv2.waitKey(20)
+
             try:
                 print "Valor de threshold: "
                 op = raw_input()
                 if op != "quit":
-                    print "Numero de divisoes do histograma: "
-                    oph = raw_input()
                     res = int(op)
-                    resh = int(oph)
-                    if res > 0 and resh > 0:
+                    print "Numero de divisao do histograma: "
+                    op2 = raw_input()
+                    res_ch = int(op2)
+                    if res > 0:
                         th = res
-                        ch = resh
-            except Exception, e:
-                if op != "quit":
-                    th = 50
-                    ch =resh
-                    print "Invalid threshold. Keeped default value TreshHold=" + str(th) + " and HistogramDivision= " + str(ch)
+                    if res_ch > 0:
+                        ch = res_ch
                 else:
                     break
-                #cv2.destroyWindow('Vector preview')
-                continue
-            finally:
-                cv2.destroyWindow('Vector preview')
+
+                cv2.destroyWindow("Vector preview")
+            except Exception, e:
+                th = 50
+                ch = 3
+                print "Invalid values. Keeped default values th = " + str(th) + " ch = " + str(ch)
+                cv2.destroyWindow("Vector preview")
+                break
 
 
-            #if 0xFF == ord('q'):
-            #    notCorrect = False # vectorizacao finalizada
-            #elif 0xFF == ord('o'): # aumentar threshold
-            #    th = th + 10
-            #elif 0xFF == ord('p'): # diminuir threshold
-            #    th = th - 10 if th > 10 else 0
-        
-        #self.cam.release_cam()
-        cv2.destroyAllWindows()
+        cv2.destroyWindow("Vector preview")
 
