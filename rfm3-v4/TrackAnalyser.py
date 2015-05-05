@@ -12,6 +12,7 @@ import gc
 import timeit
 import copy
 import os
+import time
 sys.settrace
 
 
@@ -43,10 +44,15 @@ class TrackAnalyser(Thread):
 
         self.count = 0
 
-        self.lap = 0 # nr de voltas
-        self.lapTime = 0# tempo da ultima volta
-        self.totalTime = 0# tempo de corrida
+        self.status = 1#auxiliar for lapCount
+        self.lap = 1 # nr de voltas
+        for i in range(0,10):
+            self.lapTime.append((0))
+        self.lapTime = []# tempos das voltas
+        self.startL = 0# tempo de inicio de volta
         self.trackImage = 0#guarda a imagem
+        self.elapsed=0#tempo de volta
+
         self.width = 0#image property
         self.height = 0#image property
         self.depth = 0#image property
@@ -75,6 +81,7 @@ class TrackAnalyser(Thread):
         self.unity_socket, self.addr = self.tcp_socket.accept()
         socket_list = [self.unity_socket]
 
+        self.startL = time.time()
         #server connection loop
         while(not self.end):
             data = ""
@@ -119,7 +126,9 @@ class TrackAnalyser(Thread):
                     io = self.inOrOut(ret)
                     send += ":POS:" + str(io)
                     send += ":LAP:" + str(self.lap)
-                    send += ":LAPTIME:" + str(self.lapTime)
+                    self.elapsed = time.time()
+                    self.elapsed -= self.startL
+                    send += ":LAPTIME:" + str(self.elapsed)
                 read_sockets[0].sendall(send)
                 #read_sockets[0].shutdown(SHUT_WR)
                 #read_sockets[0].close()
@@ -132,10 +141,18 @@ class TrackAnalyser(Thread):
                 #self.tcp_socket.close()
                 #read_sockets[0].close()
 
+        total=0
+        for i in range(0,10):
+            total += self.lapTime[i]
+
+        print "Race time="+ str(total)
         print 'Track Analyser Thread: Ended'
 
     def inOrOut(self,(x,y)):
         sumat = 0
+
+        #call lapCount
+        self.lapCount((x,y))
 
         for i in range (0, self.sizeLastCoords-1): # position shift of IN/OUT log
             self.lastIO[i] = self.lastIO[i+1]
@@ -159,6 +176,7 @@ class TrackAnalyser(Thread):
             return rt
         else:
             return "IOERR" #error if passed coords is out of bounds
+
     def sendCoords(self):
         #x,y = self.getCameraData() # remove and get a coord from queue
         #circles = self.getCameraData() # remove and get a coord from queue
@@ -219,35 +237,6 @@ class TrackAnalyser(Thread):
         return sumX/self.sizeLastCoords, sumY/self.sizeLastCoords
 
     def sendTrack(self,soc):
-        # image = open('transparente.png','rb').read()
-        # #print image
-        # #image.load()                                    # make sure PIL has read the data
-        # #size = os.stat('transparente.png').st_size       # get the size of the image
-        #    # buf = size                                  # keeps what you still have to send, like an image buffer
-        #     #lines = size                                # line size to send each time
-        #     #print 'Sending size'
-        #     #self.sendToUnity(str(size))                 # send size to the client
-        #     #soc.sendall(str(size))
-        #    # soc.sendall(str(size))
-        # print 'Sending...'
-        # #print size
-        # #print str(len(image))
-        #     #l = f.read(lines)
-        #     #bytes = 0                                   # bytes sent already
-        #     #print 'Sending...'
-        # output = "file=transparente.png:"
-        # output += "size=" + str(len(image)) +":"
-        # output += "data=" + image
-        #
-        #     #l = image.read()                    # read buf bytes
-        #     #self.sendToUnity(l)                 # send bytes to client
-        # print output
-        # soc.sendall(output)
-        #     #bytes += buf                        # increment bytes sent
-        #     #buf = 0                             # signals empty buffer
-        #
-        #     #w,h,pi,met =image.read()
-        #     #print w + " \n" + h + "\n" + pi + "\n" + met
         image = open('transparente.png','rb')
         l = image.read(4096)
         while(l):
@@ -350,4 +339,17 @@ class TrackAnalyser(Thread):
 
 
         cv2.destroyWindow("Vector preview")
+
+    def lapCount(self,(x,y)):
+        (a,b) = self.initialPoint
+
+        if((math.pow((x-a),2) + math.pow((y-b),2))<=20 and self.status==0):# if inside of circular range and previous coords are outside of the circle range then
+            self.status=1# coords inside the range
+            if lap <= 10:# if lap number is less than 10
+                self.lapTime[lap-1]=self.elapsed #saves into the array
+            self.lap +=1 #increment nr of laps
+            self.elapsed=0# reset elapsed time
+            self.startR=0#reset race time
+        else:
+            self.status=0
 
