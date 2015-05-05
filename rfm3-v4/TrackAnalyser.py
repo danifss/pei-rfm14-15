@@ -22,32 +22,64 @@ class TrackAnalyser(Thread):
         self.end = False
         self.tcp_socket = socket(AF_INET, SOCK_STREAM)
         self.tcp_socket.bind(('0.0.0.0', port))
-        self.tcp_socket.listen(1)
+        self.tcp_socket.listen(2) #numero de conexoes em simultaneo
         self.unity_socket, self.addr = (None, None)
 
         # camera variables
         self.rval = True
         self.cam = Camera(cameraId)
         self.lastCoords = [] # save last coords
+        self.lastIO = [] #saves last in or out
         self.rangeCoord = rangeCoord # range parameter comparing with new coord
         self.sizeLastCoords = sizeLastCoords
         #variable to save initial position
-
         self.initialPoint = (None, None)
 
+        #SaveCoords()
+        #init position save
+        for i in range(0, self.sizeLastCoords ):
+            self.lastCoords.append((0,0)) # filling the initial coords
+            self.lastIO.append((0)) #fill with out
+
+        self.count = 0
+
+        self.lap = 0 # nr de voltas
+        self.lapTime = 0# tempo da ultima volta
+        self.totalTime = 0# tempo de corrida
+        self.trackImage = 0#guarda a imagem
+        self.width = 0#image property
+        self.height = 0#image property
+        self.depth = 0#image property
+
     def run(self):
-        self.unity_socket, self.addr = self.tcp_socket.accept()
-        socket_list = [self.unity_socket]
-        state = "STOP"
-        timeout = (0.1)
+        #at the thread start moment de trackImage is loaded
+        self.trackImage = cv2.imread("vect.jpg")
+        self.height,self.width,self.height = self.trackImage.shape
+        #at the thread start moment, the car coords is initialized in this for-cycle
+        for i in range(0, self.sizeLastCoords ):
+            self.rval, frame = self.cam.get_frame() # get frame and rval
+            circles = self.cam.get_circle(frame)
+            if circles != None:
+                for r in circles[0][:]:
+                    x = r[0]
+                    y = r[1]
+                self.lastCoords[self.count]= (x,y) # filling the  coords
+                self.count +=1
+        self.sizeLastCoords = self.count  # size last coord is the number of well done initialization coords
+
+        #comunication parameters
         self.initialPoint = (-1,-1)
         self.trackAdjust() # adjusting the track and settings
+        state = "STOP"
+        timeout = (0.1)
+        self.unity_socket, self.addr = self.tcp_socket.accept()
+        socket_list = [self.unity_socket]
 
+        #server connection loop
         while(not self.end):
             data = ""
-
             try:
-                read_sockets = select.select(socket_list, [], [], timeout)[0]
+                read_sockets = select.select(socket_list, [], [])[0]
                 if len(read_sockets) == 0 and state == "STOP":
                     timeout = (0.1)
                     continue
@@ -56,16 +88,18 @@ class TrackAnalyser(Thread):
                 # self.tcp_socket.settimeout(0.1)
 
             except Exception, e:
-                self.tcp_socket.close()
+                #self.tcp_socket.close()
+                read_sockets[0].close()
                 print "Error reading socket"
+                print e
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback, limit=2, file=sys.stdout)
                 break
 
-            if data == "COORDS":
+            if data == "COORDS" or data == "COORDS\r\n":
                 state = "COORDS"
                 print 'Changed state to COORDS.'
-            elif data == "TRACK":
+            elif data == "TRACK" or data == "TRACK\r\n":
                 state = "TRACK"
                 print 'Changed state to TRACK.'
             else:
@@ -73,35 +107,76 @@ class TrackAnalyser(Thread):
                 continue
 
             if state == "COORDS":
-                self.sendCoords()       
-                self.tcp_socket.close()
+                send = ""
+                read_sockets[0].shutdown(SHUT_RD)
+                ret = self.sendCoords()
+                if ret == None or ret == "NO_COORDS":
+                    send = "NO_COORDS"
+                else:
+                    retx,rety = ret
+                    send += "COORDS:" + str(retx) + "," + str(rety)
+                    io = "OUT"
+                    io = self.inOrOut(ret)
+                    send += ":POS:" + str(io)
+                    send += ":LAP:" + str(self.lap)
+                    send += ":LAPTIME:" + str(self.lapTime)
+                read_sockets[0].sendall(send)
+                #read_sockets[0].shutdown(SHUT_WR)
+                #read_sockets[0].close()
+                #self.tcp_socket.close()
+
+
             if state == "TRACK":
-                self.sendTrack()
-                self.tcp_socket.close()
+                read_sockets[0].shutdown(SHUT_RD)
+                self.sendTrack(read_sockets[0])
+                #self.tcp_socket.close()
+                #read_sockets[0].close()
 
         print 'Track Analyser Thread: Ended'
 
-    def sendCoords(self):
-        count = 0
-        ignoreCount = 0 # if lost the car position, after some iterations it will force new position
-        for i in range(0, self.sizeLastCoords):
-            self.lastCoords.append((0,0)) # filling the initial coords
+    def inOrOut(self,(x,y)):
+        sumat = 0
 
+        for i in range (0, self.sizeLastCoords-1): # position shift of IN/OUT log
+            self.lastIO[i] = self.lastIO[i+1]
+            sumat += self.lastIO[i]
+
+        if(x<= self.width and y <= self.height):
+            if( self.trackImage[x][y][0] != 0 or self.trackImage[x][y][1] != 0 or self.trackImage[x][y][2] != 0):
+                rt = "OUT"
+                self.lastIO[-1] = 0
+            else:
+                rt = "IN"
+                self.lastIO[-1] = 1
+
+            if sumat < abs(self.sizeLastCoords/2) and rt == "IN": #ignore this time
+                rt = "OUT"
+            elif sumat >= abs(self.sizeLastCoords/2) and rt == "OUT":#ignore this time
+                rt = "IN"
+            return rt
+        else:
+            return "IOERR" #error if passed coords is out of bounds
+    def sendCoords(self):
         #x,y = self.getCameraData() # remove and get a coord from queue
         #circles = self.getCameraData() # remove and get a coord from queue
         #self.rval = self.cam.rval
+        ignoreCount = 0 # if lost the car position, after some iterations it will force new position
         self.rval, frame = self.cam.get_frame() # get frame and rval
-        frame = self.cam.crop_frame(frame) # crop frame
+        #frame = self.cam.crop_frame(frame) # crop frame
+        # for i in range(0, self.sizeLastCoords):
+        #     circles = self.cam.get_circle(frame)
+        #     x = circles[0]
+        #     y = circles[1]
+        #     self.lastCoords[i]= (x,y) # filling the  coords
         circles = self.cam.get_circle(frame)
-
         if circles != None:
             for i in circles[0][:]:
                 x = i[0]
                 y = i[1]
 
-                if(count < self.sizeLastCoords): # adding the first coords
-                    self.lastCoords[count] = (x,y)
-                    count += 1
+                if(self.count < self.sizeLastCoords): # adding the first coords
+                    self.lastCoords[self.count] = (x,y)
+                    self.count += 1
                 else:
                     xm,ym = self.calcMediaLastCoords() # calculate mean of last coords
                     if(((x > xm+self.rangeCoord) or (x < xm-self.rangeCoord) or (y > ym+self.rangeCoord) or (y < ym-self.rangeCoord)) and ignoreCount < 50):
@@ -118,26 +193,9 @@ class TrackAnalyser(Thread):
                         print x,y
                         if self.initialPoint == (-1,-1):
                             self.initialPoint = (x,y)
-                        self.sendToUnity("Coords %d %d" % (x,y) ) # send coords to unity
+                        return x,y
         else:
-            self.sendToUnity("NO_COORDS")
-
-    #def getCameraData(self):
-    #    self.rval = self.cam.rval
-        
-    #    self.rval, frame = self.cam.get_frame() # get frame and rval
-
-    #    circles = self.cam.get_circle(frame)
-    #    #if circles != None:
-    #    return circles
-    #    #else:
-    #    #    return None
-
-    #    #self.cam.show_countors(frame)
-    #    #self.cam.show_circles(frame)
-    #    #self.cam.show_countorsCircle(frame)
-    #    #ch = cv2.waitKey(10)
-
+            return "NO_COORDS"
 
     def stop(self):
         self.end = True
@@ -157,30 +215,37 @@ class TrackAnalyser(Thread):
 
         return sumX/self.sizeLastCoords, sumY/self.sizeLastCoords
 
-    def sendTrack(self):
-        image = Image.open("mascara.jpg")
-        image.load()                                    # make sure PIL has read the data
-        while True:
-            size = os.stat('mascara.jpg').st_size       # get the size of the image
-            buf = size                                  # keeps what you still have to send, like an image buffer
-            lines = size                                # line size to send each time
-            print 'Sending size'                        
-            self.sendToUnity(str(size))                 # send size to the client
-            print 'Sending...'
+    def sendTrack(self,soc):
+        image = open('transparente.png','rb').read()
+        #print image
+        #image.load()                                    # make sure PIL has read the data
+        #size = os.stat('transparente.png').st_size       # get the size of the image
+           # buf = size                                  # keeps what you still have to send, like an image buffer
+            #lines = size                                # line size to send each time
+            #print 'Sending size'
+            #self.sendToUnity(str(size))                 # send size to the client
+            #soc.sendall(str(size))
+           # soc.sendall(str(size))
+        print 'Sending...'
+        #print size
+        #print str(len(image))
             #l = f.read(lines)
-            bytes = 0                                   # bytes sent already
-            while buf:
-                print 'Sending...'
-                if (buf < lines ):                      #if buf size is less than line size ...
-                    l = image.read (buf)                    # read buf bytes
-                    self.sendToUnity(l)                 # send bytes to client
-                    bytes += buf                        # increment bytes sent
-                    buf = 0                             # signals empty buffer
-                else:
-                    l = image.read(lines)               # read line size bytes
-                    self.sendToUnity(l)                 # send line size bytes
-                    buf = buf - lines                   # decrement buffer
-                    bytes += lines
+            #bytes = 0                                   # bytes sent already
+            #print 'Sending...'
+        output = "file=transparente.png:"
+        output += "size=" + str(len(image)) +":"
+        output += "data=" + image
+
+            #l = image.read()                    # read buf bytes
+            #self.sendToUnity(l)                 # send bytes to client
+        print output
+        soc.sendall(output)
+            #bytes += buf                        # increment bytes sent
+            #buf = 0                             # signals empty buffer
+
+            #w,h,pi,met =image.read()
+            #print w + " \n" + h + "\n" + pi + "\n" + met
+
 
     def trackAdjust(self):
         notCorrect = True
