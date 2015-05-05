@@ -141,18 +141,21 @@ class TrackAnalyser(Thread):
             self.lastIO[i] = self.lastIO[i+1]
             sumat += self.lastIO[i]
 
-        if(x<= self.width and y <= self.height):
-            if( self.trackImage[x][y][0] != 0 or self.trackImage[x][y][1] != 0 or self.trackImage[x][y][2] != 0):
-                rt = "OUT"
-                self.lastIO[-1] = 0
-            else:
+        if(x>=0 and y>=0 and x<= self.width and y <= self.height):
+            #print self.trackImage[x][y]
+
+            if( self.trackImage[x][y][0] <= 10 and self.trackImage[x][y][1] <= 10 and self.trackImage[x][y][2] <= 10):
                 rt = "IN"
                 self.lastIO[-1] = 1
+            else:
+                rt = "OUT"
+                self.lastIO[-1] = 0
 
-            # if sumat < abs(self.sizeLastCoords/2) and rt == "IN": #ignore this time
-            #     rt = "OUT"
-            # elif sumat >= abs(self.sizeLastCoords/2) and rt == "OUT":#ignore this time
-            #     rt = "IN"
+            ## Validacao
+            if sumat < abs(self.sizeLastCoords/2) and rt == "IN": #ignore this time
+                rt = "OUT"
+            elif sumat >= abs(self.sizeLastCoords/2) and rt == "OUT":#ignore this time
+                rt = "IN"
             return rt
         else:
             return "IOERR" #error if passed coords is out of bounds
@@ -339,11 +342,11 @@ class TrackAnalyser(Thread):
 
                 cv2.destroyWindow("Vector preview")
             except Exception, e:
-                th = 50
-                ch = 3
-                print "Invalid values. Keeped default values th = " + str(th) + " ch = " + str(ch)
+                # th = 50
+                # ch = 3
+                print "Invalid values. Keeped last values th = " + str(th) + " ch = " + str(ch)
                 cv2.destroyWindow("Vector preview")
-                break
+                #break
 
 
         cv2.destroyWindow("Vector preview")

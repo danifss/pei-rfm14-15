@@ -86,29 +86,29 @@ class Camera(object):
         cv2.imshow("Countors with circles",frame)
 
 
-#cam = Camera()
-#rval = cam.rval
-#print rval , cam.shape
-
-#while(rval):
+# cam = Camera()
+# rval = cam.rval
+# print rval , cam.shape
+#
+# while(rval):
 #    rval, frame = cam.get_frame() # get frame and rval
-
+#
 #    #frame = cam.crop_frame(frame) # crop frame
 #    #frame = cam.resize_frame(frame, 1024, 600) # resize frame
-    
+#
 #    #cam.show_countors(frame)
 #    cam.show_circles(frame)
 #    #cam.show_countorsCircle(frame)
-
-
+#
+#
 #    #dst = frame
 #    #cv2.pyrUp( frame, frame, Size(tmp.cols*2, tmp.rows*2))
-
-
+#
+#
 #    ch = cv2.waitKey(20)
 #    if cv2.waitKey(1) & 0xFF == ord('q'):
 #        break
-
-
-#cam.release_cam()
-#cv2.destroyAllWindows()
+#
+#
+# cam.release_cam()
+# cv2.destroyAllWindows()
