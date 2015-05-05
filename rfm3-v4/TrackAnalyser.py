@@ -17,7 +17,7 @@ sys.settrace
 
 class TrackAnalyser(Thread):
 
-    def __init__(self, port = 1234, rangeCoord = 100, sizeLastCoords = 10, cameraId = 0):
+    def __init__(self, port = 1234, rangeCoord = 40, sizeLastCoords = 10, cameraId = 0):
         super(TrackAnalyser, self).__init__()
         self.end = False
         self.tcp_socket = socket(AF_INET, SOCK_STREAM)
@@ -54,7 +54,7 @@ class TrackAnalyser(Thread):
     def run(self):
         #at the thread start moment de trackImage is loaded
         self.trackImage = cv2.imread("vect.jpg")
-        self.height,self.width,self.height = self.trackImage.shape
+        self.height,self.width,self.depth = self.trackImage.shape
         #at the thread start moment, the car coords is initialized in this for-cycle
         for i in range(0, self.sizeLastCoords ):
             self.rval, frame = self.cam.get_frame() # get frame and rval
@@ -149,10 +149,10 @@ class TrackAnalyser(Thread):
                 rt = "IN"
                 self.lastIO[-1] = 1
 
-            if sumat < abs(self.sizeLastCoords/2) and rt == "IN": #ignore this time
-                rt = "OUT"
-            elif sumat >= abs(self.sizeLastCoords/2) and rt == "OUT":#ignore this time
-                rt = "IN"
+            # if sumat < abs(self.sizeLastCoords/2) and rt == "IN": #ignore this time
+            #     rt = "OUT"
+            # elif sumat >= abs(self.sizeLastCoords/2) and rt == "OUT":#ignore this time
+            #     rt = "IN"
             return rt
         else:
             return "IOERR" #error if passed coords is out of bounds
@@ -216,36 +216,40 @@ class TrackAnalyser(Thread):
         return sumX/self.sizeLastCoords, sumY/self.sizeLastCoords
 
     def sendTrack(self,soc):
-        image = open('transparente.png','rb').read()
-        #print image
-        #image.load()                                    # make sure PIL has read the data
-        #size = os.stat('transparente.png').st_size       # get the size of the image
-           # buf = size                                  # keeps what you still have to send, like an image buffer
-            #lines = size                                # line size to send each time
-            #print 'Sending size'
-            #self.sendToUnity(str(size))                 # send size to the client
-            #soc.sendall(str(size))
-           # soc.sendall(str(size))
-        print 'Sending...'
-        #print size
-        #print str(len(image))
-            #l = f.read(lines)
-            #bytes = 0                                   # bytes sent already
-            #print 'Sending...'
-        output = "file=transparente.png:"
-        output += "size=" + str(len(image)) +":"
-        output += "data=" + image
-
-            #l = image.read()                    # read buf bytes
-            #self.sendToUnity(l)                 # send bytes to client
-        print output
-        soc.sendall(output)
-            #bytes += buf                        # increment bytes sent
-            #buf = 0                             # signals empty buffer
-
-            #w,h,pi,met =image.read()
-            #print w + " \n" + h + "\n" + pi + "\n" + met
-
+        # image = open('transparente.png','rb').read()
+        # #print image
+        # #image.load()                                    # make sure PIL has read the data
+        # #size = os.stat('transparente.png').st_size       # get the size of the image
+        #    # buf = size                                  # keeps what you still have to send, like an image buffer
+        #     #lines = size                                # line size to send each time
+        #     #print 'Sending size'
+        #     #self.sendToUnity(str(size))                 # send size to the client
+        #     #soc.sendall(str(size))
+        #    # soc.sendall(str(size))
+        # print 'Sending...'
+        # #print size
+        # #print str(len(image))
+        #     #l = f.read(lines)
+        #     #bytes = 0                                   # bytes sent already
+        #     #print 'Sending...'
+        # output = "file=transparente.png:"
+        # output += "size=" + str(len(image)) +":"
+        # output += "data=" + image
+        #
+        #     #l = image.read()                    # read buf bytes
+        #     #self.sendToUnity(l)                 # send bytes to client
+        # print output
+        # soc.sendall(output)
+        #     #bytes += buf                        # increment bytes sent
+        #     #buf = 0                             # signals empty buffer
+        #
+        #     #w,h,pi,met =image.read()
+        #     #print w + " \n" + h + "\n" + pi + "\n" + met
+        image = open('transparente.png','rb')
+        l = image.read(4096)
+        while(l):
+            soc.sendall(l)
+            l = image.read(4096)
 
     def trackAdjust(self):
         notCorrect = True
