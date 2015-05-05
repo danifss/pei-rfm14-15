@@ -36,8 +36,8 @@ while True:
 
     f.write(data)
 
-    #cv2.imshow("Imagem Recebida", f)
-    #cv2.waitKey(100)
+    cv2.imshow("Imagem Recebida", f)
+    cv2.waitKey(100)
 
     f.close()
 
