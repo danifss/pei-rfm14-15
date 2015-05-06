@@ -46,9 +46,9 @@ class TrackAnalyser(Thread):
 
         self.status = 1#auxiliar for lapCount
         self.lap = 1 # nr de voltas
-        for i in range(0,10):
-            self.lapTime.append((0))
         self.lapTime = []# tempos das voltas
+        for i in range(0,10):
+            self.lapTime.append(0)
         self.startL = 0# tempo de inicio de volta
         self.trackImage = 0#guarda a imagem
         self.elapsed=0#tempo de volta
@@ -109,6 +109,9 @@ class TrackAnalyser(Thread):
             elif data == "TRACK" or data == "TRACK\r\n":
                 state = "TRACK"
                 print 'Changed state to TRACK.'
+            elif data == "QUIT" or data == "QUIT\r\n":
+                state = "STOP"
+                print 'Changed state to STOP.'
             else:
                 state = "STOP"
                 continue
@@ -140,6 +143,12 @@ class TrackAnalyser(Thread):
                 self.sendTrack(read_sockets[0])
                 #self.tcp_socket.close()
                 #read_sockets[0].close()
+
+            if state == "STOP":
+                read_sockets[0].shutdown(SHUT_RD)
+                self.tcp_socket.close()
+                read_sockets[0].close()
+                self.stop()
 
         total=0
         for i in range(0,10):
@@ -242,10 +251,11 @@ class TrackAnalyser(Thread):
         while(l):
             soc.sendall(l)
             l = image.read(4096)
+        image.close()
 
     def trackAdjust(self):
         notCorrect = True
-        th = 50 # Representa o valor de threshold
+        th = 100 # Representa o valor de threshold
         ch = 3
         while notCorrect: # enquanto a pista nao estiver corretamente vetorizada
             im = None
@@ -317,7 +327,7 @@ class TrackAnalyser(Thread):
             try:
                 print "Valor de threshold: "
                 op = raw_input()
-                if op != "quit":
+                if op != "done":
                     res = int(op)
                     print "Numero de divisao do histograma: "
                     op2 = raw_input()
@@ -349,7 +359,7 @@ class TrackAnalyser(Thread):
                 self.lapTime[lap-1]=self.elapsed #saves into the array
             self.lap +=1 #increment nr of laps
             self.elapsed=0# reset elapsed time
-            self.startR=0#reset race time
+            self.startR=time.time()#reset race time
         else:
             self.status=0
 

@@ -7,18 +7,19 @@ from time import sleep
 # ip_addr = ([(s.connect(('8.8.8.8', 80)), s.getsockname()[0], s.close()) for s in [socket(AF_INET, SOCK_DGRAM)]][0][1])
 
 try:
-    cameraId = 0
+    cameraId = 1
     portTrack = 7777
     host = 'localhost'
 
     # th_clientTrackAnalyser = ClientTrackAnalyserTest(host, portTrack)
-    th_trackAnalyser = TrackAnalyser(portTrack,100,3,cameraId)
+    th_trackAnalyser = TrackAnalyser(portTrack,100,10,cameraId)
 
 
     th_trackAnalyser.start()
     # th_clientTrackAnalyser.start()
 
-    sleep(3600)
+    while th_trackAnalyser.isAlive():
+        continue
 
     th_trackAnalyser.stop()
     # th_clientTrackAnalyser.stop()
