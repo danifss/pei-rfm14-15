@@ -75,12 +75,12 @@ try:
                 print 'Got connected with mobile on: '+client_addr[0]+','+str(client_addr[1])
         except Exception:
             if not unity and not mobile:
-                UDPsock.sendto('server:'+str(tcp_port),('<broadcast>',announcing_port_unity))
-                UDPsock.sendto('server:'+str(tcp_port),('<broadcast>',announcing_port_mobile))
+                UDPsock.sendto('server:'+str(tcp_port)+":"+str(unity_portTrack),('<broadcast>',announcing_port_unity))
+                UDPsock.sendto('server:'+str(tcp_port)+":"+str(unity_portTrack),('<broadcast>',announcing_port_mobile))
             elif unity:
-                UDPsock.sendto('server:'+str(tcp_port),('<broadcast>',announcing_port_mobile))
+                UDPsock.sendto('server:'+str(tcp_port)+":"+str(unity_portTrack),('<broadcast>',announcing_port_mobile))
             else:
-                UDPsock.sendto('server:'+str(tcp_port),('<broadcast>',announcing_port_unity))
+                UDPsock.sendto('server:'+str(tcp_port)+":"+str(unity_portTrack),('<broadcast>',announcing_port_unity))
 
 
     end = False
