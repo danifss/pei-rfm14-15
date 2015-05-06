@@ -1,0 +1,1 @@
+camReady=0 #signal
