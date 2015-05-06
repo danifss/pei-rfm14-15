@@ -89,8 +89,13 @@ try:
     #Threads
     while not end:
         try:
-            th_track = TrackAnalyser(unity_portTrack, cameraId=2)
+            th_track = TrackAnalyser(unity_portTrack, cameraId=1)
             print "Camera initialized"
+
+            th_track.start()
+            print 'waiting to send track'
+            while geral.camReady==0:
+                sleep(1)
 
             th_btcar = BTCar(dirsQueue, dataQueue, accelerometerDataQueue, car_mac_addr, car_port)
             print 'Got connected with car'
@@ -99,9 +104,6 @@ try:
             th_mobile = Mobile(dirsQueue, '', commands_port)
 
             #Start all threads
-            th_track.start()
-            while geral.camReady==0:
-                print 'waiting to send track'
             th_mobile.start()
             th_btcar.start()
             th_data_analyser.start()

@@ -140,7 +140,6 @@ class TrackAnalyser(Thread):
 
 
             if state == "TRACK":
-
                 read_sockets[0].shutdown(SHUT_RD)
                 self.sendTrack(read_sockets[0])
                 geral.camReady=1
