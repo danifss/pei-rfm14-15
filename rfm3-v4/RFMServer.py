@@ -98,10 +98,11 @@ try:
             th_mobile = Mobile(dirsQueue, '', commands_port)
 
             #Start all threads
+            th_track.start()
             th_mobile.start()
             th_btcar.start()
             th_data_analyser.start()
-            # th_track.start()
+
 
             break
         except Exception, e:
