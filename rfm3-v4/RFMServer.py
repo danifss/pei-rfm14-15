@@ -88,11 +88,13 @@ try:
     #Threads
     while not end:
         try:
+            th_track = TrackAnalyser(unity_portTrack, cameraId=2)
+            print "Camera initialized"
+            
             th_btcar = BTCar(dirsQueue, dataQueue, accelerometerDataQueue, car_mac_addr, car_port)
             print 'Got connected with car'
             
-            th_track = TrackAnalyser(unity_portTrack, cameraId=0)
-            print "Camera initialized"
+
 
             th_data_analyser = DataAnalyser(dataQueue, (unity_addr[0], unity_port), mobile_sock, ipaddr = ip_addr)
             th_mobile = Mobile(dirsQueue, '', commands_port)
