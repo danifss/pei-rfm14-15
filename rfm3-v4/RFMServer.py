@@ -6,6 +6,7 @@ from MobileTh import *
 from TrackAnalyser import *
 import sys, traceback
 import time
+import geral
 
 ip_addr = ([(s.connect(('8.8.8.8', 80)), \
             s.getsockname()[0], s.close()) \
@@ -90,22 +91,20 @@ try:
         try:
             th_track = TrackAnalyser(unity_portTrack, cameraId=2)
             print "Camera initialized"
-            
+
             th_btcar = BTCar(dirsQueue, dataQueue, accelerometerDataQueue, car_mac_addr, car_port)
             print 'Got connected with car'
-            
-
 
             th_data_analyser = DataAnalyser(dataQueue, (unity_addr[0], unity_port), mobile_sock, ipaddr = ip_addr)
             th_mobile = Mobile(dirsQueue, '', commands_port)
 
             #Start all threads
             th_track.start()
+            while geral.camReady==0:
+                print 'waiting to send track'
             th_mobile.start()
             th_btcar.start()
             th_data_analyser.start()
-
-
             break
         except Exception, e:
             print e

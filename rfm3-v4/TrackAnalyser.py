@@ -13,6 +13,7 @@ import timeit
 import copy
 import os
 import time
+import geral
 sys.settrace
 
 
@@ -139,8 +140,10 @@ class TrackAnalyser(Thread):
 
 
             if state == "TRACK":
+
                 read_sockets[0].shutdown(SHUT_RD)
                 self.sendTrack(read_sockets[0])
+                geral.camReady=1
                 #self.tcp_socket.close()
                 #read_sockets[0].close()
 
