@@ -89,7 +89,7 @@ try:
     #Threads
     while not end:
         try:
-            th_track = TrackAnalyser(unity_portTrack, cameraId=1)
+            th_track = TrackAnalyser(unity_portTrack, cameraId=2)
             print "Camera initialized"
 
             th_track.start()

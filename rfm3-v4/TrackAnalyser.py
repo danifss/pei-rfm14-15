@@ -357,8 +357,8 @@ class TrackAnalyser(Thread):
 
         if((math.pow((x-a),2) + math.pow((y-b),2))<=20 and self.status==0):# if inside of circular range and previous coords are outside of the circle range then
             self.status=1# coords inside the range
-            if lap <= 10:# if lap number is less than 10
-                self.lapTime[lap-1]=self.elapsed #saves into the array
+            if self.lap <= 10:# if lap number is less than 10
+                self.lapTime[self.lap-1]=self.elapsed #saves into the array
             self.lap +=1 #increment nr of laps
             self.elapsed=0# reset elapsed time
             self.startR=time.time()#reset race time

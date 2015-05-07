@@ -5,8 +5,8 @@ from time import sleep
 import cv2
 
 s = socket.socket()         # Create a socket object
-host = '192.168.1.105'      # Get local machine name
-#host = socket.gethostname()
+#host = '192.168.1.105'      # Get local machine name
+host = socket.gethostname()
 port = 7777                # Reserve a port for your service.
 #s.bind((host, port))        # Bind to the port
 remote_ip = socket.gethostbyname(host)
@@ -42,10 +42,11 @@ while True:
             print "Receiving..."
             f = open('imagemRecebida.png','wb')
             l = s.recv(4096)
-            while(l):
+            for j in range(1,200):
+            # while l:
                 stdout.write('.')
                 stdout.flush()
-                sleep(0.5)
+                #sleep(0.2)
                 f.write(l)
                 l = s.recv(4096)
             f.close()
