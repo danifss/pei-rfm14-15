@@ -5,7 +5,7 @@ from time import sleep
 import cv2
 
 s = socket.socket()         # Create a socket object
-#host = '192.168.1.105'      # Get local machine name
+#host = '192.168.1.103'      # Get local machine name
 host = socket.gethostname()
 port = 7777                # Reserve a port for your service.
 #s.bind((host, port))        # Bind to the port
@@ -18,35 +18,36 @@ except socket.error:
 
 
 
+#s.listen(5)                 # Now wait for client connection.
 while True:
     #Send some data to remote server
-    print "Message(quit to exit):"
+    print "Message:"
     message = raw_input()
-
-    if message == "COORDS": # pedi coords
-        print "Num de coords:"
-        iter = int(raw_input())
-        for i in range(1, iter):
-            try:
+    try:
+        if message == "COORDS": # pedi coords
+            print "Num de coords:"
+            iter = int(raw_input())
+            for i in range(1, iter):
                 s.send(message)
-                print 'Mensagem enviada.'
                 reply = s.recv(4096)
                 print reply
-            except socket.error:
-                #Send failed
-                print 'Send failed\n\n'
-                #sys.exit(0)
-    elif message == "TRACK": # pedi a imagem
-        try:
+        else:
             s.send(message)
+        print 'Mensagem enviada.\n\n'
+    except socket.error:
+        #Send failed
+        print 'Send failed\n\n'
+        #sys.exit(0)
+
+    if message == "TRACK": # pedi a imagem
+        try:
             print "Receiving..."
             f = open('imagemRecebida.png','wb')
             l = s.recv(4096)
-            for j in range(1,200):
-            # while l:
-                stdout.write('.')
-                stdout.flush()
-                #sleep(0.2)
+            while(l):
+                # stdout.write('.')
+                # stdout.flush()
+                # sleep(1)
                 f.write(l)
                 l = s.recv(4096)
             f.close()
@@ -77,4 +78,3 @@ while True:
 
 print "All done."
 s.close()                # Close the connection
-sys.exit(0)

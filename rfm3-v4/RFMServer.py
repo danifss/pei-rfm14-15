@@ -49,7 +49,14 @@ UDPsock = socket(AF_INET, SOCK_DGRAM)
 UDPsock.bind((ip_addr, 0))
 UDPsock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 try:
-    # Assert everything is connected
+    th_track = TrackAnalyser(unity_portTrack, cameraId=0)
+    print "Camera initialized"
+    th_track.start()
+    print 'waiting to send track'
+    while geral.camReady==0:
+        sleep(1)
+
+    # Assert everythiqng is connected
     unity = False
     mobile = False
     UDPsock.sendto('server:'+str(tcp_port)+":"+str(unity_portTrack),('<broadcast>',announcing_port_unity))
@@ -83,19 +90,11 @@ try:
             else:
                 UDPsock.sendto('server:'+str(tcp_port)+":"+str(unity_portTrack),('<broadcast>',announcing_port_unity))
 
-
     end = False
-    first_time = True   
+    first_time = True
     #Threads
     while not end:
         try:
-            th_track = TrackAnalyser(unity_portTrack, cameraId=2)
-            print "Camera initialized"
-
-            th_track.start()
-            print 'waiting to send track'
-            while geral.camReady==0:
-                sleep(1)
 
             th_btcar = BTCar(dirsQueue, dataQueue, accelerometerDataQueue, car_mac_addr, car_port)
             print 'Got connected with car'

@@ -7,7 +7,7 @@ from time import sleep
 # ip_addr = ([(s.connect(('8.8.8.8', 80)), s.getsockname()[0], s.close()) for s in [socket(AF_INET, SOCK_DGRAM)]][0][1])
 
 try:
-    cameraId = 2
+    cameraId = 1
     portTrack = 7777
     host = 'localhost'
 

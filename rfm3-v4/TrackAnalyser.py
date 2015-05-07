@@ -79,85 +79,104 @@ class TrackAnalyser(Thread):
         self.trackAdjust() # adjusting the track and settings
         state = "STOP"
         timeout = (0.1)
-        self.unity_socket, self.addr = self.tcp_socket.accept()
-        socket_list = [self.unity_socket]
+
+        socket_list = [self.tcp_socket]#inputs , socket we expect to read
+        #socket_outputs_list = []#outputs we expect to write
 
         self.startL = time.time()
         #server connection loop
         while(not self.end):
-            data = ""
-            try:
+            while socket_list:
                 read_sockets = select.select(socket_list, [], [])[0]
                 if len(read_sockets) == 0 and state == "STOP":
-                    timeout = (0.1)
+                    #timeout = (0.1)
                     continue
+                count = -1
+                for skt in read_sockets:
+                    count +=1
+                    if skt == self.tcp_socket:
+                        client_socket = self.tcp_socket.accept()[0]#changed, only the connection
+                        socket_list.append(client_socket)
+                    else:
+                        try:
+                            self.handle_client_message(skt)
 
-                data = read_sockets[0].recv(4096)
                 # self.tcp_socket.settimeout(0.1)
 
-            except Exception, e:
-                #self.tcp_socket.close()
-                read_sockets[0].close()
-                print "Error reading socket"
-                print e
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback, limit=2, file=sys.stdout)
-                break
+                        except Exception, e:
+                            #self.tcp_socket.close()
+                            skt.close()
+                            del(socket_list[count])
 
-            if data == "COORDS" or data == "COORDS\r\n":
-                state = "COORDS"
-                print 'Changed state to COORDS.'
-            elif data == "TRACK" or data == "TRACK\r\n":
-                state = "TRACK"
-                print 'Changed state to TRACK.'
-            elif data == "QUIT" or data == "QUIT\r\n":
-                state = "STOP"
-                print 'Changed state to STOP.'
-            else:
-                state = "STOP"
-                continue
+                            print "Error reading socket"
+                            print e
+                            exc_type, exc_value, exc_traceback = sys.exc_info()
+                            traceback.print_exception(exc_type, exc_value, exc_traceback, limit=2, file=sys.stdout)
+                            break
 
-            if state == "COORDS":
-                send = ""
-                read_sockets[0].shutdown(SHUT_RD)
-                ret = self.sendCoords()
-                if ret == None or ret == "NO_COORDS":
-                    send = "NO_COORDS"
-                else:
-                    retx,rety = ret
-                    send += "COORDS:" + str(retx) + "," + str(rety)
-                    io = "OUT"
-                    io = self.inOrOut(ret)
-                    send += ":POS:" + str(io)
-                    send += ":LAP:" + str(self.lap)
-                    self.elapsed = time.time()
-                    self.elapsed -= self.startL
-                    send += ":LAPTIME:" + str(self.elapsed)
-                read_sockets[0].sendall(send)
-                #read_sockets[0].shutdown(SHUT_WR)
-                #read_sockets[0].close()
-                #self.tcp_socket.close()
-
-
-            if state == "TRACK":
-                read_sockets[0].shutdown(SHUT_RD)
-                self.sendTrack(read_sockets[0])
-                geral.camReady=1
-                #self.tcp_socket.close()
-                #read_sockets[0].close()
-
-            if state == "STOP":
-                read_sockets[0].shutdown(SHUT_RD)
-                self.tcp_socket.close()
-                read_sockets[0].close()
-                self.stop()
 
         total=0
         for i in range(0,10):
             total += self.lapTime[i]
-
+        self.elapsed=time.time()
+        self.elapsed-=self.startL
+        total += self.elapsed
         print "Race time="+ str(total)
         print 'Track Analyser Thread: Ended'
+
+    def handle_client_message(self, skt):
+        data = skt.recv(4096)
+
+        if data == "COORDS" or data == "COORDS\r\n":
+            state = "COORDS"
+            print 'Changed state to COORDS.'
+        elif data == "TRACK" or data == "TRACK\r\n":
+            state = "TRACK"
+            print 'Changed state to TRACK.'
+        elif data == "QUIT" or data == "QUIT\r\n":
+            state = "STOP"
+            print 'Changed state to STOP.'
+        else:
+            state = "STOP"
+            return False
+
+        if state == "COORDS":
+            send = ""
+            skt.shutdown(SHUT_RD)
+            ret = self.sendCoords()
+            if ret == None or ret == "NO_COORDS":
+                send = "NO_COORDS"
+            elif ret == "OOR_ERR":
+                send = ret
+            else:
+                retx,rety = ret
+                send += "COORDS:" + str(retx) + "," + str(rety)
+                io = "OUT"
+                io = self.inOrOut(ret)
+                #io = self.inOrOut((rety,retx))
+                send += ":POS:" + str(io)
+                send += ":LAP:" + str(self.lap)
+                self.elapsed = time.time()
+                self.elapsed -= self.startL
+                send += ":LAPTIME:" + str(self.elapsed)
+            skt.sendall(send)
+            #read_sockets[0].shutdown(SHUT_WR)
+            #read_sockets[0].close()
+            #self.tcp_socket.close()
+
+
+        if state == "TRACK":
+            skt.shutdown(SHUT_RD)
+            self.sendTrack(skt)
+            geral.camReady=1
+            #self.tcp_socket.close()
+            #read_sockets[0].close()
+
+        if state == "STOP":
+            skt.shutdown(SHUT_RD)
+            self.tcp_socket.close()
+            skt.close()
+            self.stop()
 
     def inOrOut(self,(x,y)):
         sumat = 0
@@ -211,7 +230,7 @@ class TrackAnalyser(Thread):
                     self.count += 1
                 else:
                     xm,ym = self.calcMediaLastCoords() # calculate mean of last coords
-                    if(((x > xm+self.rangeCoord) or (x < xm-self.rangeCoord) or (y > ym+self.rangeCoord) or (y < ym-self.rangeCoord)) and ignoreCount < 50):
+                    if(((x > xm+self.rangeCoord) or (x < xm-self.rangeCoord) or (y > ym+self.rangeCoord) or (y < ym-self.rangeCoord)) and ignoreCount < 3):
                         ignoreCount += 1
                         #continue # ignore new coord because it's away from the last ones
                     else:
@@ -228,6 +247,7 @@ class TrackAnalyser(Thread):
                         return x,y
         else:
             return "NO_COORDS"
+        return "OOR_ERR"
 
     def stop(self):
         self.end = True
