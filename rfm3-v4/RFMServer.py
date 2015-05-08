@@ -49,14 +49,14 @@ UDPsock = socket(AF_INET, SOCK_DGRAM)
 UDPsock.bind((ip_addr, 0))
 UDPsock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 try:
-    th_track = TrackAnalyser(unity_portTrack, cameraId=0)
+    th_track = TrackAnalyser(unity_portTrack, cameraId=1)
     print "Camera initialized"
     th_track.start()
     print 'waiting to send track'
     while geral.camReady==0:
         sleep(1)
 
-    # Assert everythiqng is connected
+    # Assert everything is connected
     unity = False
     mobile = False
     UDPsock.sendto('server:'+str(tcp_port)+":"+str(unity_portTrack),('<broadcast>',announcing_port_unity))

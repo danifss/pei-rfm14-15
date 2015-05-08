@@ -36,7 +36,7 @@ class TrackAnalyser(Thread):
         self.sizeLastCoords = sizeLastCoords
         #variable to save initial position
         self.initialPoint = (None, None)
-
+        self.ignoreCount = 0 # if lost the car position, after some iterations it will force new position
         #SaveCoords()
         #init position save
         for i in range(0, self.sizeLastCoords ):
@@ -61,7 +61,8 @@ class TrackAnalyser(Thread):
     def run(self):
         #at the thread start moment de trackImage is loaded
         self.trackImage = cv2.imread("vect.jpg")
-        self.height,self.width,self.depth = self.trackImage.shape
+        # self.height,self.width,self.depth = self.trackImage.shape
+        self.height,self.width,self.depth = self.cam.get_shape()
         #at the thread start moment, the car coords is initialized in this for-cycle
         for i in range(0, self.sizeLastCoords ):
             self.rval, frame = self.cam.get_frame() # get frame and rval
@@ -211,7 +212,7 @@ class TrackAnalyser(Thread):
         #x,y = self.getCameraData() # remove and get a coord from queue
         #circles = self.getCameraData() # remove and get a coord from queue
         #self.rval = self.cam.rval
-        ignoreCount = 0 # if lost the car position, after some iterations it will force new position
+
         self.rval, frame = self.cam.get_frame() # get frame and rval
         #frame = self.cam.crop_frame(frame) # crop frame
         # for i in range(0, self.sizeLastCoords):
@@ -230,11 +231,11 @@ class TrackAnalyser(Thread):
                     self.count += 1
                 else:
                     xm,ym = self.calcMediaLastCoords() # calculate mean of last coords
-                    if(((x > xm+self.rangeCoord) or (x < xm-self.rangeCoord) or (y > ym+self.rangeCoord) or (y < ym-self.rangeCoord)) and ignoreCount < 3):
-                        ignoreCount += 1
+                    if(((x > xm+self.rangeCoord) or (x < xm-self.rangeCoord) or (y > ym+self.rangeCoord) or (y < ym-self.rangeCoord)) and self.ignoreCount < 3):
+                        self.ignoreCount += 1
                         #continue # ignore new coord because it's away from the last ones
                     else:
-                        ignoreCount = 0 # reset to zero
+                        self.ignoreCount = 0 # reset to zero
                         # shift left values of the array
                         for i in range (0, self.sizeLastCoords-1):
                             self.lastCoords[i] = self.lastCoords[i+1]
@@ -308,7 +309,7 @@ class TrackAnalyser(Thread):
             #th = 50 # Representa o valor de threshold
             print 'Threshold: ',th
             # Determinar um valor intermedio
-            min_level =  sorted(histo)[2*len(histo)/ch]
+            min_level =  sorted(histo)[len(histo)/ch]
             while th < 255:
                 if histo[th] > black_value:
                     black_value = histo[th]
