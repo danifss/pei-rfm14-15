@@ -1,18 +1,20 @@
-# from Queue import *
-# from socket import *
 from TrackAnalyser import *
-# from ClientTrackAnalyserTest import *
-from time import sleep
+import geral
+# from time import sleep
 
 # ip_addr = ([(s.connect(('8.8.8.8', 80)), s.getsockname()[0], s.close()) for s in [socket(AF_INET, SOCK_DGRAM)]][0][1])
 
 try:
-    cameraId = 1
+    th_trackAnalyser = None
+    cameraId = 0
     portTrack = 7777
     host = 'localhost'
 
+    rangeCoord = 100
+    sizeLastCoords = 10
+
     # th_clientTrackAnalyser = ClientTrackAnalyserTest(host, portTrack)
-    th_trackAnalyser = TrackAnalyser(portTrack,100,10,cameraId)
+    th_trackAnalyser = TrackAnalyser(portTrack, rangeCoord, sizeLastCoords, cameraId)
 
 
     th_trackAnalyser.start()
@@ -23,7 +25,10 @@ try:
 
     th_trackAnalyser.stop()
     # th_clientTrackAnalyser.stop()
+
 except KeyboardInterrupt, e:
-    print e.message
-    th_trackAnalyser.stop()
+    print geral.carStat
+    print e
+    if th_trackAnalyser is not None:
+        th_trackAnalyser.stop()
     sys.exit(0)

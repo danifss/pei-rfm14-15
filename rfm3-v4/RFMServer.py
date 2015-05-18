@@ -16,6 +16,7 @@ ip_addr = ([(s.connect(('8.8.8.8', 80)), \
 #ip_addr = '127.0.0.1'
 
 #GLOBAL VARIABLES
+cameraId = 0
 dataCollect = False
 trackCollect = False
 announcing_port_unity = 10101
@@ -49,11 +50,9 @@ UDPsock = socket(AF_INET, SOCK_DGRAM)
 UDPsock.bind((ip_addr, 0))
 UDPsock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 try:
-    th_track = TrackAnalyser(unity_portTrack, cameraId=1)
-    print "Camera initialized"
+    th_track = TrackAnalyser(unity_portTrack, cameraId=cameraId)
     th_track.start()
-    print 'waiting to send track'
-    while geral.camReady==0:
+    while geral.camReady == 0:
         sleep(1)
 
     # Assert everything is connected

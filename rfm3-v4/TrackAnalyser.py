@@ -1,3 +1,5 @@
+from Camera import *
+from CarStatAnalyser import *
 from socket import *
 import select
 from threading import *
@@ -5,7 +7,6 @@ import cv2
 import math
 import numpy
 import matplotlib.pyplot as plt
-from Camera import *
 from PIL import Image, ImageFilter, ImageOps
 import sys, traceback
 import gc
@@ -27,16 +28,20 @@ class TrackAnalyser(Thread):
         self.tcp_socket.listen(2) #numero de conexoes em simultaneo
         self.unity_socket, self.addr = (None, None)
 
+        # Thread para analisar stats do Carro
+        self.th_carStatAnalyser = CarStatAnalyser(rangeCoord, sizeLastCoords, cameraId)
+
         # camera variables
-        self.rval = True
-        self.cam = Camera(cameraId)
+        self.rval = False
+        self.cam = None
+        self.cameraId = cameraId
         self.lastCoords = [] # save last coords
         self.lastIO = [] #saves last in or out
         self.rangeCoord = rangeCoord # range parameter comparing with new coord
         self.sizeLastCoords = sizeLastCoords
         #variable to save initial position
         self.initialPoint = (None, None)
-        self.ignoreCount = 0 # if lost the car position, after some iterations it will force new position
+
         #SaveCoords()
         #init position save
         for i in range(0, self.sizeLastCoords ):
@@ -45,35 +50,35 @@ class TrackAnalyser(Thread):
 
         self.count = 0
 
-        self.status = 1#auxiliar for lapCount
+        self.status = 1 #auxiliar for lapCount
         self.lap = 1 # nr de voltas
-        self.lapTime = []# tempos das voltas
+        self.lapTime = [] # tempos das voltas
         for i in range(0,10):
             self.lapTime.append(0)
-        self.startL = 0# tempo de inicio de volta
-        self.trackImage = 0#guarda a imagem
-        self.elapsed=0#tempo de volta
+        self.startL = 0 # tempo de inicio de volta
+        self.trackImage = 0 #guarda a imagem
+        self.elapsed=0 #tempo de volta
 
-        self.width = 0#image property
-        self.height = 0#image property
-        self.depth = 0#image property
+        self.width = 0 #image property
+        self.height = 0 #image property
+        self.depth = 0 #image property
 
     def run(self):
-        #at the thread start moment de trackImage is loaded
-        self.trackImage = cv2.imread("vect.jpg")
+        # #at the thread start moment the trackImage is loaded
+        # self.trackImage = cv2.imread("vect.jpg")
         # self.height,self.width,self.depth = self.trackImage.shape
-        self.height,self.width,self.depth = self.cam.get_shape()
+
         #at the thread start moment, the car coords is initialized in this for-cycle
-        for i in range(0, self.sizeLastCoords ):
-            self.rval, frame = self.cam.get_frame() # get frame and rval
-            circles = self.cam.get_circle(frame)
-            if circles != None:
-                for r in circles[0][:]:
-                    x = r[0]
-                    y = r[1]
-                self.lastCoords[self.count]= (x,y) # filling the  coords
-                self.count +=1
-        self.sizeLastCoords = self.count  # size last coord is the number of well done initialization coords
+        # for i in range(0, self.sizeLastCoords ):
+        #     self.rval, frame = self.cam.get_frame() # get frame and rval
+        #     circles = self.cam.get_circle(frame)
+        #     if circles != None:
+        #         for r in circles[0][:]:
+        #             x = r[0]
+        #             y = r[1]
+        #         self.lastCoords[self.count]= (x,y) # filling the  coords
+        #         self.count +=1
+        # self.sizeLastCoords = self.count  # size last coord is the number of well done initialization coords
 
         #comunication parameters
         self.initialPoint = (-1,-1)
@@ -84,7 +89,8 @@ class TrackAnalyser(Thread):
         socket_list = [self.tcp_socket]#inputs , socket we expect to read
         #socket_outputs_list = []#outputs we expect to write
 
-        self.startL = time.time()
+        self.th_carStatAnalyser.start()
+        # self.startL = time.time()
         #server connection loop
         while(not self.end):
             while socket_list:
@@ -102,7 +108,7 @@ class TrackAnalyser(Thread):
                         try:
                             self.handle_client_message(skt)
 
-                # self.tcp_socket.settimeout(0.1)
+                        # self.tcp_socket.settimeout(0.1)
 
                         except Exception, e:
                             #self.tcp_socket.close()
@@ -144,23 +150,26 @@ class TrackAnalyser(Thread):
         if state == "COORDS":
             send = ""
             skt.shutdown(SHUT_RD)
-            ret = self.sendCoords()
-            if ret == None or ret == "NO_COORDS":
-                send = "NO_COORDS"
-            elif ret == "OOR_ERR":
-                send = ret
-            else:
-                retx,rety = ret
-                send += "COORDS:" + str(retx) + "," + str(rety)
-                io = "OUT"
-                io = self.inOrOut(ret)
-                #io = self.inOrOut((rety,retx))
-                send += ":POS:" + str(io)
-                send += ":LAP:" + str(self.lap)
-                self.elapsed = time.time()
-                self.elapsed -= self.startL
-                send += ":LAPTIME:" + str(self.elapsed)
-            skt.sendall(send)
+            # ret = self.sendCoords()
+            # if ret == None or ret == "NO_COORDS":
+            #     send = "NO_COORDS"
+            # elif ret == "OOR_ERR":
+            #     send = ret
+            # else:
+            #     retx,rety = ret
+            #     send += "COORDS:" + str(retx) + "," + str(rety)
+            #     io = "OUT"
+            #     io = self.inOrOut(ret)
+            #     #io = self.inOrOut((rety,retx))
+            #     send += ":POS:" + str(io)
+            #     send += ":LAP:" + str(self.lap)
+            #     self.elapsed = time.time()
+            #     self.elapsed -= self.startL
+            #     send += ":LAPTIME:" + str(self.elapsed)
+            # skt.sendall(send)
+
+            # Receber a coordenada da thread
+            skt.sendall(geral.carStat)
             #read_sockets[0].shutdown(SHUT_WR)
             #read_sockets[0].close()
             #self.tcp_socket.close()
@@ -179,79 +188,81 @@ class TrackAnalyser(Thread):
             skt.close()
             self.stop()
 
-    def inOrOut(self,(x,y)):
-        sumat = 0
+    # def inOrOut(self,(x,y)):
+    #     sumat = 0
+    #
+    #     #call lapCount
+    #     self.lapCount((x,y))
+    #
+    #     for i in range (0, self.sizeLastCoords-1): # position shift of IN/OUT log
+    #         self.lastIO[i] = self.lastIO[i+1]
+    #         sumat += self.lastIO[i]
+    #
+    #     if x>=0 and y>=0 and x<= self.width and y <= self.height:
+    #         #print self.trackImage[x][y]
+    #
+    #         if self.trackImage[x][y][0] <= 10 and self.trackImage[x][y][1] <= 10 and self.trackImage[x][y][2] <= 10:
+    #             rt = "IN"
+    #             self.lastIO[-1] = 1
+    #         else:
+    #             rt = "OUT"
+    #             self.lastIO[-1] = 0
+    #
+    #         ## Validacao
+    #         if sumat < abs(self.sizeLastCoords/2) and rt == "IN": #ignore this time
+    #             rt = "OUT"
+    #         elif sumat >= abs(self.sizeLastCoords/2) and rt == "OUT":#ignore this time
+    #             rt = "IN"
+    #         return rt
+    #     else:
+    #         return "IOERR" #error if passed coords is out of bounds
 
-        #call lapCount
-        self.lapCount((x,y))
-
-        for i in range (0, self.sizeLastCoords-1): # position shift of IN/OUT log
-            self.lastIO[i] = self.lastIO[i+1]
-            sumat += self.lastIO[i]
-
-        if(x>=0 and y>=0 and x<= self.width and y <= self.height):
-            #print self.trackImage[x][y]
-
-            if( self.trackImage[x][y][0] <= 10 and self.trackImage[x][y][1] <= 10 and self.trackImage[x][y][2] <= 10):
-                rt = "IN"
-                self.lastIO[-1] = 1
-            else:
-                rt = "OUT"
-                self.lastIO[-1] = 0
-
-            ## Validacao
-            if sumat < abs(self.sizeLastCoords/2) and rt == "IN": #ignore this time
-                rt = "OUT"
-            elif sumat >= abs(self.sizeLastCoords/2) and rt == "OUT":#ignore this time
-                rt = "IN"
-            return rt
-        else:
-            return "IOERR" #error if passed coords is out of bounds
-
-    def sendCoords(self):
-        #x,y = self.getCameraData() # remove and get a coord from queue
-        #circles = self.getCameraData() # remove and get a coord from queue
-        #self.rval = self.cam.rval
-
-        self.rval, frame = self.cam.get_frame() # get frame and rval
-        #frame = self.cam.crop_frame(frame) # crop frame
-        # for i in range(0, self.sizeLastCoords):
-        #     circles = self.cam.get_circle(frame)
-        #     x = circles[0]
-        #     y = circles[1]
-        #     self.lastCoords[i]= (x,y) # filling the  coords
-        circles = self.cam.get_circle(frame)
-        if circles != None:
-            for i in circles[0][:]:
-                x = i[0]
-                y = i[1]
-
-                if(self.count < self.sizeLastCoords): # adding the first coords
-                    self.lastCoords[self.count] = (x,y)
-                    self.count += 1
-                else:
-                    xm,ym = self.calcMediaLastCoords() # calculate mean of last coords
-                    if(((x > xm+self.rangeCoord) or (x < xm-self.rangeCoord) or (y > ym+self.rangeCoord) or (y < ym-self.rangeCoord)) and self.ignoreCount < 3):
-                        self.ignoreCount += 1
-                        #continue # ignore new coord because it's away from the last ones
-                    else:
-                        self.ignoreCount = 0 # reset to zero
-                        # shift left values of the array
-                        for i in range (0, self.sizeLastCoords-1):
-                            self.lastCoords[i] = self.lastCoords[i+1]
-
-                        self.lastCoords[-1] = x,y # add new coord to last position on array
-
-                        print x,y
-                        if self.initialPoint == (-1,-1):
-                            self.initialPoint = (x,y)
-                        return x,y
-        else:
-            return "NO_COORDS"
-        return "OOR_ERR"
+    # def sendCoords(self):
+    #     #x,y = self.getCameraData() # remove and get a coord from queue
+    #     #circles = self.getCameraData() # remove and get a coord from queue
+    #     #self.rval = self.cam.rval
+    #     ignoreCount = 0 # if lost the car position, after some iterations it will force new position
+    #     self.rval, frame = self.cam.get_frame() # get frame and rval
+    #     #frame = self.cam.crop_frame(frame) # crop frame
+    #     # for i in range(0, self.sizeLastCoords):
+    #     #     circles = self.cam.get_circle(frame)
+    #     #     x = circles[0]
+    #     #     y = circles[1]
+    #     #     self.lastCoords[i]= (x,y) # filling the  coords
+    #     circles = self.cam.get_circle(frame)
+    #     if circles != None:
+    #         for i in circles[0][:]:
+    #             x = i[0]
+    #             y = i[1]
+    #
+    #             if(self.count < self.sizeLastCoords): # adding the first coords
+    #                 self.lastCoords[self.count] = (x,y)
+    #                 self.count += 1
+    #             else:
+    #                 xm,ym = self.calcMediaLastCoords() # calculate mean of last coords
+    #                 if(((x > xm+self.rangeCoord) or (x < xm-self.rangeCoord) or (y > ym+self.rangeCoord) or (y < ym-self.rangeCoord)) and ignoreCount < 3):
+    #                     ignoreCount += 1
+    #                     #continue # ignore new coord because it's away from the last ones
+    #                 else:
+    #                     ignoreCount = 0 # reset to zero
+    #                     # shift left values of the array
+    #                     for i in range (0, self.sizeLastCoords-1):
+    #                         self.lastCoords[i] = self.lastCoords[i+1]
+    #
+    #                     self.lastCoords[-1] = x,y # add new coord to last position on array
+    #
+    #                     print x,y
+    #                     if self.initialPoint == (-1,-1):
+    #                         self.initialPoint = (x,y)
+    #                     return x,y
+    #     else:
+    #         return "NO_COORDS"
+    #     return "OOR_ERR"
 
     def stop(self):
         self.end = True
+        self.th_carStatAnalyser.stop()
+
     
     def sendToUnity(self, data):
         try:
@@ -259,14 +270,14 @@ class TrackAnalyser(Thread):
         except Exception, e:
             print "Error sending to unity"
 
-    def calcMediaLastCoords(self):
-        sumX = 0
-        sumY = 0
-        for i in range(0, self.sizeLastCoords):
-            sumX += self.lastCoords[i][0] # sum all x
-            sumY += self.lastCoords[i][1] # sum all y
-
-        return sumX/self.sizeLastCoords, sumY/self.sizeLastCoords
+    # def calcMediaLastCoords(self):
+    #     sumX = 0
+    #     sumY = 0
+    #     for i in range(0, self.sizeLastCoords):
+    #         sumX += self.lastCoords[i][0] # sum all x
+    #         sumY += self.lastCoords[i][1] # sum all y
+    #
+    #     return sumX/self.sizeLastCoords, sumY/self.sizeLastCoords
 
     def sendTrack(self,soc):
         image = open('transparente.png','rb')
@@ -274,18 +285,21 @@ class TrackAnalyser(Thread):
         while(l):
             soc.sendall(l)
             l = image.read(4096)
+        # soc.sendall("endOfImage")
         image.close()
 
     def trackAdjust(self):
         notCorrect = True
         th = 100 # Representa o valor de threshold
         ch = 3
+        cam = Camera(self.cameraId)
+        rval = True
         while notCorrect: # enquanto a pista nao estiver corretamente vetorizada
             im = None
             # setting up track
-            while self.rval:
-                self.rval,im = self.cam.get_frame()
-                im = self.cam.crop_frame(im) # crop frame
+            while rval:
+                rval,im = cam.get_frame()
+                #im = cam.crop_frame(im) # crop frame
                 #rval, image = vc.read()
                 cv2.namedWindow( "Display window", cv2.CALIB_FIX_ASPECT_RATIO)
                 cv2.imshow("Display window", im)
@@ -302,14 +316,15 @@ class TrackAnalyser(Thread):
             # Criar histograma para determinar valor de threshold entre pretos e brancos
             # histo = image.histogram()
             histo = image.convert('L').histogram()
-            plt.plot(histo)
-            plt.show()
             black_value = 0
+            ## show histogram
+            # plt.plot(histo)
+            # plt.show()
 
             #th = 50 # Representa o valor de threshold
             print 'Threshold: ',th
             # Determinar um valor intermedio
-            min_level =  sorted(histo)[len(histo)/ch]
+            min_level =  sorted(histo)[2*len(histo)/ch]
             while th < 255:
                 if histo[th] > black_value:
                     black_value = histo[th]
@@ -360,6 +375,8 @@ class TrackAnalyser(Thread):
                     if res_ch > 0:
                         ch = res_ch
                 else:
+                    cv2.destroyWindow("Vector preview")
+                    print "Waiting to send track..."
                     break
 
                 cv2.destroyWindow("Vector preview")
@@ -372,17 +389,19 @@ class TrackAnalyser(Thread):
 
 
         cv2.destroyWindow("Vector preview")
+        cam.release_cam()
+        self.cam = None
 
-    def lapCount(self,(x,y)):
-        (a,b) = self.initialPoint
-
-        if((math.pow((x-a),2) + math.pow((y-b),2))<=20 and self.status==0):# if inside of circular range and previous coords are outside of the circle range then
-            self.status=1# coords inside the range
-            if self.lap <= 10:# if lap number is less than 10
-                self.lapTime[self.lap-1]=self.elapsed #saves into the array
-            self.lap +=1 #increment nr of laps
-            self.elapsed=0# reset elapsed time
-            self.startR=time.time()#reset race time
-        else:
-            self.status=0
+    # def lapCount(self,(x,y)):
+    #     (a,b) = self.initialPoint
+    #
+    #     if((math.pow((x-a),2) + math.pow((y-b),2))<=20 and self.status==0):# if inside of circular range and previous coords are outside of the circle range then
+    #         self.status=1# coords inside the range
+    #         if self.lap <= 10:# if lap number is less than 10
+    #             self.lapTime[self.lap-1]=self.elapsed #saves into the array
+    #         self.lap +=1 #increment nr of laps
+    #         self.elapsed=0# reset elapsed time
+    #         self.startR=time.time()#reset race time
+    #     else:
+    #         self.status=0
 
