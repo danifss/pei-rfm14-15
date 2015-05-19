@@ -6,6 +6,8 @@ class Camera(object):
     ### init camera, rval and image shape
     def __init__(self, camera=0):
         self.cam = cv2.VideoCapture(camera)
+        #self.cam.set(3,680)
+        #self.cam.set(4,440)
         self.rval = False
         self.shape = None
         self.frame = None

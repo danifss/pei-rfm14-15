@@ -137,6 +137,9 @@ class TrackAnalyser(Thread):
         if data == "COORDS" or data == "COORDS\r\n":
             state = "COORDS"
             print 'Changed state to COORDS.'
+        elif data == "TRACKSIZE" or data == "TRACKSIZE\r\n":
+            state = "TRACKSIZE"
+            print 'Changed state to TRACKSIZE.'
         elif data == "TRACK" or data == "TRACK\r\n":
             state = "TRACK"
             print 'Changed state to TRACK.'
@@ -182,6 +185,9 @@ class TrackAnalyser(Thread):
             geral.camReady=1
             #self.tcp_socket.close()
             #read_sockets[0].close()
+        if state == "TRACKSIZE":
+            skt.shutdown(SHUT_RD)
+            self.sendTrackSize(skt)
 
         if state == "STOP":
             skt.shutdown(SHUT_RD)
@@ -290,7 +296,9 @@ class TrackAnalyser(Thread):
         soc.shutdown(SHUT_WR)
         # soc.sendall("endOfImage")
         image.close()
-
+    def sendTrackSize(self,soc):
+        soc.sendall(os.path.getsize('transparente.png'))
+        soc.shutdown(SHUT_WR)
     def trackAdjust(self):
         notCorrect = True
         th = 100 # Representa o valor de threshold

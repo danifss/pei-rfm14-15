@@ -16,7 +16,7 @@ ip_addr = ([(s.connect(('8.8.8.8', 80)), \
 #ip_addr = '127.0.0.1'
 
 #GLOBAL VARIABLES
-cameraId = 1
+cameraId = 0
 dataCollect = False
 trackCollect = False
 announcing_port_unity = 10101
