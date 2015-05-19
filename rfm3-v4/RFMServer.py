@@ -99,6 +99,7 @@ try:
             print 'Got connected with car'
 
             th_data_analyser = DataAnalyser(dataQueue, (unity_addr[0], unity_port), mobile_sock, ipaddr = ip_addr)
+
             th_mobile = Mobile(dirsQueue, '', commands_port)
 
             #Start all threads
@@ -138,15 +139,8 @@ try:
             mobile_sock.send('ready\n')
             first_time = False
 
-        # message = ['', '']
-        # while message[0] != 'start' and message[0] != 'end':
-        #     try:
-        #         message = mobile_sock.recv(512).rstrip().split(':')
-        #     except timeout:
-        #         print 'Waiting for game to start...'
 
-
-        ### GameModes
+        ### GameModes types
         # start/end:1P:player
         # start/end:2P:player1:player2
         # start/end:free:player
@@ -196,6 +190,8 @@ try:
                     break
 
                 unity_sock.send(data[0])
+                print data
+
             except timeout:
                 try:
                     data = unity_sock.recv(10).rstrip().split(':')
@@ -205,7 +201,7 @@ try:
                 except timeout:
                     continue
 
-        ## send restart signal and jump to se start threads if restart was pressed on mobile-Tiago
+        ## send restart signal and jump to se start threads if restart was pressed on mobile
         time.sleep(2)
 except KeyboardInterrupt:
 

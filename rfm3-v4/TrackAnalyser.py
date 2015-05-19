@@ -64,21 +64,6 @@ class TrackAnalyser(Thread):
         self.depth = 0 #image property
 
     def run(self):
-        # #at the thread start moment the trackImage is loaded
-        # self.trackImage = cv2.imread("vect.jpg")
-        # self.height,self.width,self.depth = self.trackImage.shape
-
-        #at the thread start moment, the car coords is initialized in this for-cycle
-        # for i in range(0, self.sizeLastCoords ):
-        #     self.rval, frame = self.cam.get_frame() # get frame and rval
-        #     circles = self.cam.get_circle(frame)
-        #     if circles != None:
-        #         for r in circles[0][:]:
-        #             x = r[0]
-        #             y = r[1]
-        #         self.lastCoords[self.count]= (x,y) # filling the  coords
-        #         self.count +=1
-        # self.sizeLastCoords = self.count  # size last coord is the number of well done initialization coords
 
         #comunication parameters
         self.initialPoint = (-1,-1)
@@ -156,13 +141,13 @@ class TrackAnalyser(Thread):
             # Ler a coordenada gerada da thread
             skt.sendall(geral.carStat)
 
-
         if state == "TRACK":
             skt.shutdown(SHUT_RD)
             self.sendTrack(skt)
             geral.camReady=1
             #self.tcp_socket.close()
             #read_sockets[0].close()
+
         if state == "TRACKSIZE":
             # skt.shutdown(SHUT_RD)
             self.sendTrackSize(skt)

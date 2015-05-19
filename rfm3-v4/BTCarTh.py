@@ -14,6 +14,7 @@ class BTCar(Thread):
         self.accelerometerDataQueue = accelerometerDataQueue
         self.bt_sock = BluetoothSocket(RFCOMM)
         self.bt_sock.connect((bd_addr, port))
+        self.bt_sock.send('ba')
         self.bt_sock.send('p')
 
     def run(self):
