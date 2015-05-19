@@ -59,7 +59,7 @@ class CarStatAnalyser(Thread):
         while(not self.end):
             coord = None
             self.rval, frame = self.cam.get_frame() # get frame and rval
-
+            self.cam.show_circles(frame)
             circles = self.cam.get_circle(frame)
             if circles != None:
                 for i in circles[0][:]:

@@ -150,6 +150,9 @@ class TrackAnalyser(Thread):
         if state == "COORDS":
             send = ""
             skt.shutdown(SHUT_RD)
+            # Ler a coordenada gerada da thread
+            skt.sendall(geral.carStat)
+
             # ret = self.sendCoords()
             # if ret == None or ret == "NO_COORDS":
             #     send = "NO_COORDS"
@@ -168,8 +171,6 @@ class TrackAnalyser(Thread):
             #     send += ":LAPTIME:" + str(self.elapsed)
             # skt.sendall(send)
 
-            # Receber a coordenada da thread
-            skt.sendall(geral.carStat)
             #read_sockets[0].shutdown(SHUT_WR)
             #read_sockets[0].close()
             #self.tcp_socket.close()
@@ -284,7 +285,9 @@ class TrackAnalyser(Thread):
         l = image.read(4096)
         while(l):
             soc.sendall(l)
+            l = None
             l = image.read(4096)
+        soc.shutdown(SHUT_WR)
         # soc.sendall("endOfImage")
         image.close()
 
@@ -355,19 +358,19 @@ class TrackAnalyser(Thread):
             mask = Image.fromarray(flooded)
 
             mask.save("vect.jpg")
-            print "Processing completed."
+            # print "Processing completed."
 
             # verificar se a vetorizacao foi correta
             vect = cv2.imread("vect.jpg")
-            cv2.imshow('Vector preview',vect)
+            cv2.imshow("Vector preview",vect)
             cv2.waitKey(20)
 
             try:
-                print "Valor de threshold: "
+                print "Change the threshold (enter done if ok): "
                 op = raw_input()
                 if op != "done":
                     res = int(op)
-                    print "Numero de divisao do histograma: "
+                    print "Number of divisions of the histogram (3 is normal): "
                     op2 = raw_input()
                     res_ch = int(op2)
                     if res > 0:

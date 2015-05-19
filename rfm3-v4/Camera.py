@@ -71,12 +71,14 @@ class Camera(object):
     def show_countors(self, frame):
         frame, countors = self.get_contors(frame)
         cv2.imshow("Contours",frame)
+        cv2.waitKey(20)
 
     ### showing the detected circles
     def show_circles(self, frame):
         circles = self.get_circle(frame)
         frame = self.draw_circles(frame, circles)
         cv2.imshow("Circle",frame)
+        cv2.waitKey(20)
 
     ### showing the countors with circles drawn
     def show_countorsCircle(self, frame):
@@ -84,6 +86,7 @@ class Camera(object):
         circles = self.get_circle(frame)
         frame = self.draw_circles(countorFrame, circles)
         cv2.imshow("Countors with circles",frame)
+        cv2.waitKey(20)
 
 
 # cam = Camera()
