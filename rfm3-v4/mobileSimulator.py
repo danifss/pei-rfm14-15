@@ -30,9 +30,9 @@ s.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 s.bind(('',listen_port))
 message = ''
 print 'Finding server...'
-while message <> 'server':
-	data, server_addr = s.recvfrom(512)
-	message = data.split(':')[0]
+while message != 'server':
+    data, server_addr = s.recvfrom(512)
+    message = data.split(':')[0]
 server_ip = server_addr[0]
 server_port = int(data.split(':')[1])
 
@@ -48,13 +48,13 @@ tcp_s.send('mobile\n')
 
 # wait for 'ready' message
 message = ''
-while message <> 'ready\n':
-	data = tcp_s.recv(128)
-	message = data.split(':')[0]
-	if message == 'error':
-		tcp_s.close()
-		print 'Error: '+data.split(':')[1]
-		sys.exit(0)
+while message != 'ready\n':
+    data = tcp_s.recv(128)
+    message = data.split(':')[0]
+    if message == 'error':
+        tcp_s.close()
+        print 'Error: '+data.split(':')[1]
+        sys.exit(0)
 
 print 'Everything ready'
 a = raw_input('Press enter to start game')

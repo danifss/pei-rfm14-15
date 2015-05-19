@@ -16,7 +16,7 @@ ip_addr = ([(s.connect(('8.8.8.8', 80)), \
 #ip_addr = '127.0.0.1'
 
 #GLOBAL VARIABLES
-cameraId = 0
+cameraId = 1
 dataCollect = False
 trackCollect = False
 announcing_port_unity = 10101
@@ -108,16 +108,16 @@ try:
             break
         except Exception, e:
             print e
-            if th_btcar:
+            if th_btcar.isAlive():
                 th_btcar.stop()
 
-            if th_track:
+            if th_track.isAlive():
                 th_track.stop()
 
-            if th_mobile:
+            if th_mobile.isAlive():
                 th_mobile.stop()
 
-            if th_data_analyser:
+            if th_data_analyser.isAlive():
                 th_data_analyser.stop()
 
             print 'Cant connect to car'
@@ -133,19 +133,24 @@ try:
 
     while True:
         print 'Waiting for game to start...'
-        #if first_time:
-        #   print 'please adjust the track to the camera...press a key to continue'
-        #   TrackAdjust.adjustTrack()   #ajustar a pista -Tiago
-        #   imgLocation = TrackAdjust.save_trackImg() #grava a pista numa img -Tiago
-        #   TrackSend.sendToUnity(imgLocation) #envia para o unity -Tiago
-        #   mobile_sock.send('ready\n')
-        #   first_time = False
 
         if first_time:
             mobile_sock.send('ready\n')
             first_time = False
 
-        message = ['','']
+        # message = ['', '']
+        # while message[0] != 'start' and message[0] != 'end':
+        #     try:
+        #         message = mobile_sock.recv(512).rstrip().split(':')
+        #     except timeout:
+        #         print 'Waiting for game to start...'
+
+
+        ### GameModes
+        # start/end:1P:player
+        # start/end:2P:player1:player2
+        # start/end:free:player
+        message = ['', '', '']
         while message[0] != 'start' and message[0] != 'end':
             try:
                 message = mobile_sock.recv(512).rstrip().split(':')
@@ -156,7 +161,24 @@ try:
             end = True
             break
 
-        unity_sock.send('start:'+message[1]+'\n')
+
+        ## Filtering game modes
+        if message[1] == '2P':
+            unity_sock.send('start:2P:'+message[2]+':'+message[3]+'\n')
+            geral.gameMode = message[1]
+            if not th_track.isAlive(): # starting trackAnalyser thread
+                th_track.start()
+        elif message[1] == 'free':
+            unity_sock.send('start:free:'+message[2]+'\n')
+            geral.gameMode = message[1]
+            if th_track.isAlive(): # stopping trackAnalyser thread
+                th_track.stop()
+        else: # 1P
+            unity_sock.send('start:'+message[1]+'\n')
+            geral.gameMode = "1P"
+            if not th_track.isAlive(): # starting trackAnalyser thread
+                th_track.start()
+
         print 'Game started'
 
         #Socket to get exit signal from unity
@@ -164,6 +186,7 @@ try:
         unity_sock.settimeout(1)
         mobile_sock.settimeout(1)
         #Wait for exit signal from Unity
+        ########## PLAYING
         while True:
             try:
                 data = mobile_sock.recv(10).rstrip().split(':')

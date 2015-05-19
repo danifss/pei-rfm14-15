@@ -59,7 +59,8 @@ class CarStatAnalyser(Thread):
         while(not self.end):
             coord = None
             self.rval, frame = self.cam.get_frame() # get frame and rval
-            self.cam.show_circles(frame)
+            # self.cam.show_circles(frame)
+
             circles = self.cam.get_circle(frame)
             if circles != None:
                 for i in circles[0][:]:
@@ -108,6 +109,7 @@ class CarStatAnalyser(Thread):
                 self.elapsed -= self.startL
                 send += ":LAPTIME:" + str(self.elapsed)
                 geral.carStat = send
+                time.sleep(2000)
 
 
     def stop(self):

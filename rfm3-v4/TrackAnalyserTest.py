@@ -5,7 +5,7 @@ import geral
 
 try:
     th_trackAnalyser = None
-    cameraId = 0
+    cameraId = 1
     portTrack = 7777
     host = 'localhost'
 

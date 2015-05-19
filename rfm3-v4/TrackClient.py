@@ -31,7 +31,7 @@ try:
             for i in range(1, iter):
                 try:
                     s.send(message)
-                    print 'Mensagem enviada.'
+                    # print 'Mensagem enviada.'
                     reply = s.recv(4096)
                     print reply
                 except socket.error:
@@ -42,16 +42,20 @@ try:
             try:
                 s.send(message)
                 print "Receiving..."
-                f = open('imagemRecebida.png','wb')
+                f = open('imagemRecebida.png', 'wb')
 
                 bytes = s.recv(4096)
                 while bytes:
                     f.write(bytes)
                     bytes = s.recv(4096)
+                    print len(bytes)
+                    # sleep(0.2)
+                    # stdout.write('.')
+                    # stdout.flush()
 
                     # if bytes != "endOfImage":
                     #     break
-                    if bytes < 4096:
+                    if len(bytes) < 4096:
                         f.write(bytes)
                         break
 
