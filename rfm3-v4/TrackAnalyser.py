@@ -174,7 +174,7 @@ class TrackAnalyser(Thread):
 
         soc.send('TRACK\n')
         # print str('PNG:'+w+':'+h+':'+size+'\n')
-        info = 'PNG:'+w+':'+h+':'+size+'\n'
+        info = 'PNG:'+w+':'+h+':'+size
         soc.send(info) # ('PNG:%d:%d:%d\n' % w % h % size)
         # count = 0
 
@@ -188,8 +188,9 @@ class TrackAnalyser(Thread):
                 data = image.read(total)
                 total = 0
 
-            self.update_progress(1/total)
-            sleep(1)
+            # self.update_progress(total%100)
+            #sleep(1)
+
 
             print total
             if len(data) > 0:
@@ -205,7 +206,9 @@ class TrackAnalyser(Thread):
         # soc.sendall("endOfImage")
 
     def update_progress(progress):
-        print '\r[{0}] {1}%'.format('#'*(progress/10), progress)
+        stdout.write('\r[{0}] {1}%'.format('#'*(progress/5), progress))
+        stdout.flush()
+        sleep(0.02)
 
     def trackAdjust(self):
         notCorrect = True
