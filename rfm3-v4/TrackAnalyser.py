@@ -71,11 +71,12 @@ class TrackAnalyser(Thread):
         state = "STOP"
         timeout = (0.1)
 
-        socket_list = [self.tcp_socket]#inputs , socket we expect to read
-        #socket_outputs_list = []#outputs we expect to write
+        socket_list = [self.tcp_socket] # inputs , socket we expect to read
+        #socket_outputs_list = [] # outputs we expect to write
 
+        # Start car stats analyser thread
         self.th_carStatAnalyser.start()
-        # self.startL = time.time()
+
         #server connection loop
         while(not self.end):
             while socket_list:
@@ -84,16 +85,16 @@ class TrackAnalyser(Thread):
                     #timeout = (0.1)
                     continue
                 count = -1
-                for skt in read_sockets:
+                for skt in read_sockets: # tratar clientes ligados
                     count +=1
                     if skt == self.tcp_socket:
-                        client_socket = self.tcp_socket.accept()[0]#changed, only the connection
+                        client_socket = self.tcp_socket.accept()[0] # [0] gives only the connection
                         socket_list.append(client_socket)
                     else:
                         try:
                             self.handle_client_message(skt)
 
-                        # self.tcp_socket.settimeout(0.1)
+                            # self.tcp_socket.settimeout(0.1)
 
                         except Exception, e:
                             #self.tcp_socket.close()
@@ -119,16 +120,13 @@ class TrackAnalyser(Thread):
     def handle_client_message(self, skt):
         data = skt.recv(4096)
 
-        if data == "COORDS" or data == "COORDS\r\n":
+        data = data.split('\r\n')[0]
+        if data == "COORDS":
             state = "COORDS"
-            print 'Changed state to COORDS.'
-        elif data == "TRACKSIZE" or data == "TRACKSIZE\r\n":
-            state = "TRACKSIZE"
-            print 'Changed state to TRACKSIZE.'
-        elif data == "TRACK" or data == "TRACK\r\n":
+        elif data == "TRACK":
             state = "TRACK"
             print 'Changed state to TRACK.'
-        elif data == "QUIT" or data == "QUIT\r\n":
+        elif data == "QUIT":
             state = "STOP"
             print 'Changed state to STOP.'
         else:
@@ -147,10 +145,6 @@ class TrackAnalyser(Thread):
             geral.camReady=1
             #self.tcp_socket.close()
             #read_sockets[0].close()
-
-        if state == "TRACKSIZE":
-            # skt.shutdown(SHUT_RD)
-            self.sendTrackSize(skt)
 
         if state == "STOP":
             skt.shutdown(SHUT_RD)
@@ -171,23 +165,47 @@ class TrackAnalyser(Thread):
             print "Error sending to unity"
 
 
-    def sendTrack(self,soc):
-        image = open('transparente.png','rb')
-        l = image.read(4096)
-        while(l):
-            soc.sendall(l)
-            l = None
-            l = image.read(4096)
-        # soc.shutdown(SHUT_WR)
-        # soc.sendall("endOfImage")
+    def sendTrack(self, soc):
+        image = open('transparente.png', 'rb')
+        statinfo = os.stat('transparente.png')
+        size = str(statinfo.st_size)
+        w = '640'
+        h = '480'
+
+        soc.send('TRACK\n')
+        # print str('PNG:'+w+':'+h+':'+size+'\n')
+        info = 'PNG:'+w+':'+h+':'+size+'\n'
+        soc.send(info) # ('PNG:%d:%d:%d\n' % w % h % size)
+        # count = 0
+
+        blockSize = geral.blockSize
+        total = statinfo.st_size # image size
+        while True:
+            if total > blockSize:
+                data = image.read(blockSize)
+                total = total - blockSize #+ len(data)
+            else:
+                data = image.read(total)
+                total = 0
+
+            self.update_progress(1/total)
+            sleep(1)
+
+            print total
+            if len(data) > 0:
+                soc.send(data)
+                if total == 0:
+                    break
+            else:
+                break
+
         image.close()
 
+        # soc.shutdown(SHUT_WR)
+        # soc.sendall("endOfImage")
 
-    def sendTrackSize(self,soc):
-        size = str(os.path.getsize('transparente.png'))
-        soc.sendall(size)
-        soc.shutdown(SHUT_WR)
-
+    def update_progress(progress):
+        print '\r[{0}] {1}%'.format('#'*(progress/10), progress)
 
     def trackAdjust(self):
         notCorrect = True
@@ -197,14 +215,11 @@ class TrackAnalyser(Thread):
         rval = True
         while notCorrect: # enquanto a pista nao estiver corretamente vetorizada
             im = None
-            # setting up track
+            # take photo of the track
             while rval:
                 rval,im = cam.get_frame()
-                #im = cam.crop_frame(im) # crop frame
-                #rval, image = vc.read()
-                cv2.namedWindow( "Display window", cv2.CALIB_FIX_ASPECT_RATIO)
+                # cv2.namedWindow("Display window", cv2.CALIB_FIX_ASPECT_RATIO)
                 cv2.imshow("Display window", im)
-                #cv2.waitKey(20)
                 if cv2.waitKey(10) & 0xFF == ord('q'):
                     break
             cv2.destroyWindow("Display window")
@@ -212,7 +227,7 @@ class TrackAnalyser(Thread):
             image = Image.fromarray(im).convert('RGB')
             width = image.size[0]
             height = image.size[1]
-            print width," ",height
+            # print width," ",height
 
             # Criar histograma para determinar valor de threshold entre pretos e brancos
             # histo = image.histogram()
@@ -222,7 +237,6 @@ class TrackAnalyser(Thread):
             # plt.plot(histo)
             # plt.show()
 
-            #th = 50 # Representa o valor de threshold
             print 'Threshold: ',th
             # Determinar um valor intermedio
             min_level =  sorted(histo)[2*len(histo)/ch]
@@ -239,12 +253,12 @@ class TrackAnalyser(Thread):
             mask = mask.point(lambda i: i < th and 255)
             maskPng = mask
             mask = mask.convert('RGB')
-            mask.save("mask.jpg")
+            mask.save(geral.MASKNAME)
 
             # Transparencia
             output = ImageOps.fit(image,maskPng.size,centering=(50,50))
             output.putalpha(maskPng) # aplicar transparencia nos pontos pretos da mascara
-            output.save('transparente.png')
+            output.save(geral.TRANSPARENTNAME)
 
 
             flooded = numpy.array(mask.copy())
@@ -254,12 +268,10 @@ class TrackAnalyser(Thread):
             cv2.floodFill(flooded,cv2mask, (width/2, height/2), (0, 255, 0), (10,)*3, (10,)*3, cv2.FLOODFILL_FIXED_RANGE)
 
             mask = Image.fromarray(flooded)
-
-            mask.save("vect.jpg")
-            # print "Processing completed."
+            mask.save(geral.VECTORNAME)
 
             # verificar se a vetorizacao foi correta
-            vect = cv2.imread("vect.jpg")
+            vect = cv2.imread(geral.VECTORNAME)
             cv2.imshow("Vector preview",vect)
             cv2.waitKey(20)
 
@@ -291,5 +303,3 @@ class TrackAnalyser(Thread):
 
         cv2.destroyWindow("Vector preview")
         cam.release_cam()
-        self.cam = None
-

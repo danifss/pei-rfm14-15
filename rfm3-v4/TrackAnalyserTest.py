@@ -5,14 +5,13 @@ import geral
 
 try:
     th_trackAnalyser = None
-    cameraId = 1
     portTrack = 7777
     host = 'localhost'
 
     rangeCoord = 100
     sizeLastCoords = 10
 
-    th_trackAnalyser = TrackAnalyser(portTrack, rangeCoord, sizeLastCoords, cameraId)
+    th_trackAnalyser = TrackAnalyser(portTrack, rangeCoord, sizeLastCoords, geral.cameraId)
 
     th_trackAnalyser.start()
 

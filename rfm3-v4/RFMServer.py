@@ -16,7 +16,7 @@ ip_addr = ([(s.connect(('8.8.8.8', 80)), \
 #ip_addr = '127.0.0.1'
 
 #GLOBAL VARIABLES
-cameraId = 1
+cameraId = geral.cameraId
 dataCollect = False
 trackCollect = False
 announcing_port_unity = 10101
@@ -190,6 +190,10 @@ try:
                     break
 
                 unity_sock.send(data[0])
+
+                # If car out of track mandar o vibrate
+                if geral.carStat.split(':')[1] == 'OUT' and geral.gameMode != 'free':
+                    mobile_sock.send('outOfTrack\n')
                 print data
 
             except timeout:
