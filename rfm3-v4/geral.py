@@ -10,7 +10,7 @@ TRANSPARENTNAME = "transparente.png"
 # Vectorized image name
 VECTORNAME = "vect.jpg"
 
-# signal
+# signal to say if track adjust was made with success
 camReady = 0
 
 # most updated car stat

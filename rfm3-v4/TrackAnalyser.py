@@ -188,9 +188,8 @@ class TrackAnalyser(Thread):
                 data = image.read(total)
                 total = 0
 
-            # self.update_progress(total%100)
+            # self.update_progress(total/100)
             #sleep(1)
-
 
             print total
             if len(data) > 0:
@@ -206,7 +205,7 @@ class TrackAnalyser(Thread):
         # soc.sendall("endOfImage")
 
     def update_progress(progress):
-        stdout.write('\r[{0}] {1}%'.format('#'*(progress/5), progress))
+        stdout.write('\r[{0}] {1}%'.format('#'*(progress/10), progress))
         stdout.flush()
         sleep(0.02)
 
