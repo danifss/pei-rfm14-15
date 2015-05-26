@@ -103,7 +103,11 @@ class CarStatAnalyser(Thread):
                 self.elapsed -= self.startL
                 send += ":LAPTIME:" + str(self.elapsed)
                 geral.carStat = send
-                time.sleep(0.1)
+
+                # print send
+                # time.sleep(0.1)
+                # sys.stdout.write(send)
+                # sys.stdout.flush()
 
     def stop(self):
         self.end = True
@@ -127,10 +131,10 @@ class CarStatAnalyser(Thread):
                 self.lastIO[-1] = 0
 
             ## Validacao
-            # if sumat < abs(self.sizeLastCoords / 2) and rt == "IN":  # ignore this time
-            #     rt = "OUT"
-            # elif sumat >= abs(self.sizeLastCoords / 2) and rt == "OUT":  # ignore this time
-            #     rt = "IN"
+            if sumat < abs(self.sizeLastCoords / 2) and rt == "IN":  # ignore this time
+                rt = "OUT"
+            elif sumat >= abs(self.sizeLastCoords / 2) and rt == "OUT":  # ignore this time
+                rt = "IN"
             return rt
         else:
             return "IOERR"  # error if passed coords is out of bounds

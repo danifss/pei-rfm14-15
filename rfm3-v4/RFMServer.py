@@ -23,7 +23,6 @@ announcing_port_unity = 10101
 announcing_port_mobile = 10100
 unity_port = 6666
 unity_portTrack = 7777
-#unity_portITrack = 8888 #porta de envio de imagem da pista
 commands_port = 4444
 car_mac_addr = '98:D3:31:B0:81:26'
 car_port = 1
@@ -49,12 +48,8 @@ TCPsock.settimeout(3)
 UDPsock = socket(AF_INET, SOCK_DGRAM)
 UDPsock.bind((ip_addr, 0))
 UDPsock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
-try:
-    th_track = TrackAnalyser(unity_portTrack, cameraId=cameraId)
-    th_track.start()
-    while geral.camReady == 0:
-        sleep(1)
 
+try:
     # Assert everything is connected
     unity = False
     mobile = False
@@ -89,23 +84,29 @@ try:
             else:
                 UDPsock.sendto('server:'+str(tcp_port)+":"+str(unity_portTrack),('<broadcast>',announcing_port_unity))
 
+    # Adjust Track Camera
+    th_track = TrackAnalyser(unity_portTrack, cameraId=cameraId)
+    th_track.start()
+    while geral.camReady == 0:
+        sleep(1)
+
     end = False
     first_time = True
     #Threads
     while not end:
         try:
 
-            th_btcar = BTCar(dirsQueue, dataQueue, accelerometerDataQueue, car_mac_addr, car_port)
-            print 'Got connected with car'
-
-            th_data_analyser = DataAnalyser(dataQueue, (unity_addr[0], unity_port), mobile_sock, ipaddr = ip_addr)
+            # th_btcar = BTCar(dirsQueue, dataQueue, accelerometerDataQueue, car_mac_addr, car_port)
+            # print 'Got connected with car'
+            #
+            # th_data_analyser = DataAnalyser(dataQueue, (unity_addr[0], unity_port), mobile_sock, ipaddr = ip_addr)
 
             th_mobile = Mobile(dirsQueue, '', commands_port)
 
             #Start all threads
             th_mobile.start()
-            th_btcar.start()
-            th_data_analyser.start()
+            # th_btcar.start()
+            # th_data_analyser.start()
             break
         except Exception, e:
             print e
@@ -127,9 +128,6 @@ try:
             mobile_sock.close()
             unity_sock.close()
             client_s.close()
-
-            #TCPsock.close()
-            #sys.exit(0)
 
 
     while True:
@@ -191,10 +189,10 @@ try:
 
                 unity_sock.send(data[0])
 
-                # If car out of track mandar o vibrate
+                # If car out of track sends vibrate to mobile if not in free mode
                 if geral.carStat.split(':')[1] == 'OUT' and geral.gameMode != 'free':
                     mobile_sock.send('outOfTrack\n')
-                print data
+                # print data
 
             except timeout:
                 try:

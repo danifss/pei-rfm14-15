@@ -65,7 +65,8 @@ class DataAnalyser(Thread):
                 self.sendToUnity(data + '  ' + action)
             # self.sendToUnity(data)
             except Exception:
+                lol = True
             # , sys.exc_info()[0]
-                print 'Exception in DataAnalyser (first is normal)', error
+            #     print 'Exception in DataAnalyser (first is normal)', error
         else:
             self.ignore = False

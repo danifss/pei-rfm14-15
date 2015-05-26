@@ -58,7 +58,7 @@ while message != 'ready\n':
 
 print 'Everything ready'
 a = raw_input('Press enter to start game')
-tcp_s.send('start:helder\n')
+tcp_s.send('start:Daniel\n')
 print 'Game started'
 
 commands_port = 4444

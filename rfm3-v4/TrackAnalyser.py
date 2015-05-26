@@ -82,7 +82,6 @@ class TrackAnalyser(Thread):
             while socket_list:
                 read_sockets = select.select(socket_list, [], [])[0]
                 if len(read_sockets) == 0 and state == "STOP":
-                    #timeout = (0.1)
                     continue
                 count = -1
                 for skt in read_sockets: # tratar clientes ligados
@@ -107,7 +106,6 @@ class TrackAnalyser(Thread):
                             traceback.print_exception(exc_type, exc_value, exc_traceback, limit=2, file=sys.stdout)
                             break
 
-
         total=0
         for i in range(0,10):
             total += self.lapTime[i]
@@ -121,9 +119,9 @@ class TrackAnalyser(Thread):
         data = skt.recv(4096)
 
         data = data.split('\r\n')[0]
-        if data == "COORDS":
+        if data == "GET_COORDS" or data == "COORDS":
             state = "COORDS"
-        elif data == "TRACK":
+        elif data == "GET_TRACK" or data == "TRACK":
             state = "TRACK"
             print 'Changed state to TRACK.'
         elif data == "QUIT":
@@ -134,7 +132,7 @@ class TrackAnalyser(Thread):
             return False
 
         if state == "COORDS":
-            send = ""
+            # send = ""
             skt.shutdown(SHUT_RD)
             # Ler a coordenada gerada da thread
             skt.sendall(geral.carStat)
@@ -154,8 +152,8 @@ class TrackAnalyser(Thread):
 
 
     def stop(self):
-        self.end = True
         self.th_carStatAnalyser.stop()
+        self.end = True
 
     
     def sendToUnity(self, data):
@@ -174,9 +172,9 @@ class TrackAnalyser(Thread):
 
         soc.send('TRACK\n')
         # print str('PNG:'+w+':'+h+':'+size+'\n')
-        info = 'PNG:'+w+':'+h+':'+size
-        soc.send(info) # ('PNG:%d:%d:%d\n' % w % h % size)
-        # count = 0
+        info = 'PNG:'+w+':'+h+':'+size+'\n'
+        soc.send(info)
+        count = 0
 
         blockSize = geral.blockSize
         total = statinfo.st_size # image size
@@ -188,26 +186,25 @@ class TrackAnalyser(Thread):
                 data = image.read(total)
                 total = 0
 
-            # self.update_progress(total/100)
-            #sleep(1)
+            self.update_progress(count%100)
+            count += 1
 
-            print total
             if len(data) > 0:
                 soc.send(data)
                 if total == 0:
+                    self.update_progress(100)
+                    print '\nImage sent with success.'
                     break
             else:
                 break
 
         image.close()
 
-        # soc.shutdown(SHUT_WR)
-        # soc.sendall("endOfImage")
 
-    def update_progress(progress):
-        stdout.write('\r[{0}] {1}%'.format('#'*(progress/10), progress))
-        stdout.flush()
-        sleep(0.02)
+    def update_progress(self,progress):
+        sys.stdout.write('\r[{0}] {1}%'.format('='*(progress/10), progress))
+        sys.stdout.flush()
+        time.sleep(0.02)
 
     def trackAdjust(self):
         notCorrect = True
@@ -224,6 +221,7 @@ class TrackAnalyser(Thread):
                 cv2.imshow("Display window", im)
                 if cv2.waitKey(10) & 0xFF == ord('q'):
                     break
+            # im = cv2.imread("vect.jpg")
             cv2.destroyWindow("Display window")
 
             image = Image.fromarray(im).convert('RGB')
@@ -305,3 +303,4 @@ class TrackAnalyser(Thread):
 
         cv2.destroyWindow("Vector preview")
         cam.release_cam()
+

@@ -1,5 +1,5 @@
 # Camera id
-cameraId = 0
+cameraId = 1
 
 # Mask image name
 MASKNAME = "mask.jpg"

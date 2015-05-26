@@ -31,13 +31,11 @@ try:
                 try:
                     s.send(message)
                     # print 'Mensagem enviada.'
-                    reply = s.recv(4096)
-                    print reply
-                    sleep(1)
+                    coords = s.recv(4096)
                 except socket.error:
-                    # Send failed
                     print 'Send failed\n\n'
-                    # sys.exit(0)
+                print coords
+                sleep(0.1)
         elif message == "TRACK":  # pedi a imagem
             try:
                 s.send(message)
@@ -47,47 +45,29 @@ try:
                 blockSize = geral.blockSize
 
                 trackString = s.recv(blockSize)  # obter TRACK\n
-                s.send('BoaCena')
+                s.send('TRACK\n')
 
                 info = s.recv(blockSize)
                 print info
                 (tipo, w, h, size) = info.split(':')
 
+                count = 0
                 bytes = s.recv(blockSize)
                 while bytes:
                     f.write(bytes)
                     bytes = s.recv(blockSize)
                     # print len(bytes)
 
-                    sleep(0.2)
-                    stdout.write('.')
-                    stdout.flush()
+                    sys.stdout.write('\r[{0}] {1}%'.format('='*(count%100/10), count))
+                    sys.stdout.flush()
+                    # sleep(0.02)
+                    count += 1
 
                     # if bytes != "endOfImage":
                     #     break
                     if len(bytes) < blockSize:
                         f.write(bytes)
                         break
-
-
-                # buf = int(s.recv(4096)) # get size
-                # to_read = buf
-                # bytes = 0
-                # while buf > 0:
-                #     if buf >= to_read:
-                #         l = s.recv(to_read)
-                #         f.write(l)
-                #         buf -= to_read
-                #         bytes += to_read
-                #         #sleep(0.2)
-                #         stdout.write('.')
-                #         stdout.flush()
-                #     else:
-                #         l = s.recv(buf)
-                #         f.write(l)
-                #         bytes += buf
-                #         buf = 0
-                #         s.shutdown(SHUT_RD)
 
                 f.close()
                 print 'Image received.'
@@ -112,5 +92,11 @@ except Exception, e:
     print e.message
     s.close()
     sys.exit(0)
+
+
+def update_progress(progress):
+    sys.stdout.write('\r[{0}] {1}%'.format('='*(progress/10), progress))
+    sys.stdout.flush()
+    time.sleep(0.02)
 
 
