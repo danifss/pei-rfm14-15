@@ -1,3 +1,6 @@
+### Projeto em Engenharia Informática (Project in Computer Engineering)
+> Ano lectivo de 2014 / 2015 - Universidade de Aveiro
+
 # Race For Music
 
 O projeto Race For Music consiste num jogo imersivo de corridas.
